@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>D365 F&O Support Report — 11 Feb 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ══════════ RESET & BASE ══════════ */
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Aptos','Segoe UI',system-ui,-apple-system,sans-serif;background:#0a0a14;color:#e2e8f0;line-height:1.6}
+.w{max-width:1360px;margin:0 auto;padding:26px}
+
+/* ══════════ HEADER ══════════ */
+.hdr{background:linear-gradient(135deg,#4c1d95,#6d28d9 35%,#7c3aed 65%,#a78bfa);padding:50px 44px 42px;border-radius:22px;text-align:center;margin-bottom:30px;position:relative;overflow:hidden;box-shadow:0 24px 64px rgba(124,58,237,.35)}
+.hdr::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23fff' fill-opacity='.03'%3E%3Cpath d='M20 20h-2v2h2v-2zm0-20h-2v2h2V0zM0 20h2v-2H0v2z'/%3E%3C/g%3E%3C/svg%3E") repeat}
+.hdr h1{font-size:2.25rem;font-weight:800;color:#fff;letter-spacing:-.5px;position:relative}
+.hdr .sub{font-size:1.05rem;color:rgba(255,255,255,.88);margin-top:8px;position:relative}
+.hdr .tags{display:inline-flex;flex-wrap:wrap;gap:12px;margin-top:16px;position:relative}
+.hdr .tag{font-size:.78rem;color:rgba(255,255,255,.7);background:rgba(0,0,0,.18);padding:6px 16px;border-radius:24px;font-family:Consolas,monospace;letter-spacing:.4px}
+
+/* ══════════ METRIC CARDS ══════════ */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:18px;margin-bottom:12px}
+.cd{padding:24px 20px;border-radius:18px;text-align:center;box-shadow:0 10px 35px rgba(0,0,0,.28);transition:transform .22s;cursor:default}
+.cd:hover{transform:translateY(-4px)}
+.cd .v{font-size:2.4rem;font-weight:900;line-height:1.1}
+.cd .l{font-size:.72rem;opacity:.88;margin-top:6px;font-weight:600;text-transform:uppercase;letter-spacing:.9px}
+.cd .ic{font-size:1.9rem;margin-bottom:5px}
+.cd.red{background:linear-gradient(135deg,#dc2626,#f97316);color:#fff}
+.cd.org{background:linear-gradient(135deg,#ea580c,#facc15);color:#fff}
+.cd.pur{background:linear-gradient(135deg,#7c3aed,#c084fc);color:#fff}
+.cd.dk{background:linear-gradient(135deg,#1e1b4b,#312e81);color:#fff;border:1px solid rgba(124,58,237,.3)}
+.cd.blu{background:linear-gradient(135deg,#0369a1,#22d3ee);color:#fff}
+.cd.ros{background:linear-gradient(135deg,#be123c,#fb7185);color:#fff}
+.cd.grn{background:linear-gradient(135deg,#059669,#10b981);color:#fff}
+
+/* ══════════ DEPARTMENT GAUGE HERO ══════════ */
+.dept-hero{background:linear-gradient(180deg,#1a1740,#0e0e1a);border:1px solid rgba(124,58,237,.2);border-radius:20px;padding:32px;margin-bottom:30px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.25)}
+.dept-hero h3{font-size:1rem;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+.dept-hero .gauge-row{display:flex;justify-content:center;align-items:flex-end;gap:48px;flex-wrap:wrap;margin-top:12px}
+.gauge-block{display:flex;flex-direction:column;align-items:center}
+.gauge-block .lbl{font-size:.78rem;color:#94a3b8;margin-top:6px;font-weight:600}
+.gc{position:relative;width:250px;height:145px}
+.gc canvas{width:250px!important;height:145px!important}
+.gc .gv{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);font-weight:900;line-height:1}
+.gc .gv.big{font-size:2.8rem;color:#fb923c}
+.gc .gv.med{font-size:1.6rem}
+.dept-hero .breakdown{font-size:.82rem;color:#64748b;margin-top:14px}
+.dept-hero .breakdown strong{color:#c4b5fd}
+.dept-hero .status-tag{display:inline-block;margin-top:10px;padding:6px 20px;border-radius:24px;font-size:.78rem;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+.status-tag.overloaded{background:rgba(220,38,38,.2);color:#fca5a5;border:1px solid rgba(220,38,38,.4)}
+
+/* ══════════ SECTIONS ══════════ */
+.sec{margin-bottom:30px}
+.sh{display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:12px;border-bottom:2px solid rgba(124,58,237,.22)}
+.sn{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 4px 14px rgba(124,58,237,.3)}
+.st{font-size:1.2rem;font-weight:700;color:#c4b5fd}
+
+/* ══════════ CHART CONTAINERS ══════════ */
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:22px}
+@media(max-width:900px){.cg{grid-template-columns:1fr}}
+.cb{background:linear-gradient(180deg,#1a1740,#0e0e1a);border:1px solid rgba(124,58,237,.16);border-radius:18px;padding:26px;box-shadow:0 6px 24px rgba(0,0,0,.2)}
+.cb.full{grid-column:1/-1}
+.cb h3{font-size:.9rem;font-weight:700;color:#a78bfa;margin-bottom:16px;text-transform:uppercase;letter-spacing:.7px;display:flex;align-items:center;gap:8px}
+.cb h3::before{content:'';width:4px;height:18px;background:linear-gradient(180deg,#7c3aed,#a78bfa);border-radius:2px}
+.cb canvas{max-height:360px}
+.cb.tall canvas{max-height:440px}
+
+/* ══════════ TABLES ══════════ */
+.tw{overflow-x:auto;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,.28);border:1px solid rgba(124,58,237,.12)}
+table{width:100%;border-collapse:collapse;background:#141428}
+thead th{background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;padding:14px 15px;text-align:left;font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;white-space:nowrap}
+thead th:first-child{border-radius:16px 0 0 0}thead th:last-child{border-radius:0 16px 0 0}
+tbody td{padding:12px 15px;font-size:.84rem;border-bottom:1px solid rgba(124,58,237,.06);color:#cbd5e1}
+tbody tr:hover{background:rgba(124,58,237,.06)}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:last-child td:first-child{border-radius:0 0 0 16px}
+tbody tr:last-child td:last-child{border-radius:0 0 16px 0}
+.rx{background:rgba(220,38,38,.10)!important}
+.rc{background:rgba(234,88,12,.06)!important}
+
+/* ══════════ BADGES ══════════ */
+.b{display:inline-block;padding:4px 13px;border-radius:20px;font-size:.64rem;font-weight:800;text-transform:uppercase;letter-spacing:.7px}
+.b-ex{background:#dc2626;color:#fff}.b-cr{background:rgba(220,38,38,.15);color:#fca5a5}
+.b-hi{background:rgba(234,88,12,.15);color:#fdba74}.b-md{background:rgba(250,204,21,.15);color:#fde047}
+.b-lo{background:rgba(34,197,94,.15);color:#86efac}.b-ok{background:rgba(34,197,94,.15);color:#86efac}
+
+/* ══════════ VALUE COLORS ══════════ */
+.ve{color:#f87171;font-weight:800}.vc{color:#fb923c;font-weight:700}.vg{color:#34d399;font-weight:700}
+.vm{color:#fbbf24;font-weight:600}.vp{color:#f87171;font-weight:600}.vb{color:#60a5fa;font-weight:600}
+
+/* ══════════ MINI BARS ══════════ */
+.mb{display:flex;align-items:center;gap:7px;min-width:145px}
+.mb-bg{flex:1;height:11px;background:rgba(255,255,255,.07);border-radius:6px;overflow:hidden}
+.mb-f{height:100%;border-radius:6px}
+.mb-v{font-size:.73rem;font-weight:700;white-space:nowrap;min-width:55px;text-align:right}
+
+/* ══════════ ALERTS ══════════ */
+.al{padding:20px 26px;border-radius:14px;margin-bottom:18px;border-left:5px solid}
+.al-c{background:rgba(220,38,38,.07);border-color:#dc2626;color:#fca5a5}
+.al-w{background:rgba(234,88,12,.07);border-color:#ea580c;color:#fdba74}
+.al-i{background:rgba(59,130,246,.07);border-color:#3b82f6;color:#93c5fd}
+.al-s{background:rgba(34,197,94,.07);border-color:#10b981;color:#86efac}
+.al b,.al strong{color:#fff}
+
+/* ══════════ FOOTER ══════════ */
+.ft{background:linear-gradient(135deg,#1e1b4b,#0a0a14);border:1px solid rgba(124,58,237,.18);padding:30px 34px;border-radius:18px;margin-top:36px;font-size:.8rem;color:#64748b}
+.ft strong{color:#a78bfa}
+.ft .fm{background:rgba(0,0,0,.35);padding:16px 20px;border-radius:12px;margin-top:14px;font-family:Consolas,'Courier New',monospace;font-size:.78rem;color:#34d399;border:1px solid rgba(52,211,153,.12);line-height:2}
+</style>
+</head>
+<body>
+<div class="w">
+
+<!-- HEADER -->
+<div class="hdr">
+  <h1>Dynamics 365 Finance &amp; Operations Support Report</h1>
+  <div class="sub">Support Department — Executive Performance Analysis</div>
+  <div class="tags">
+    <span class="tag">SNAPSHOT: 11 FEB 2026</span>
+    <span class="tag">OPEN: 180 CASES</span>
+    <span class="tag">AGENTS: 6 ACTIVE</span>
+    <span class="tag">DATA QUALITY: ✓ PASS</span>
+    <span class="tag">COMPLIANCE: PRMT01-E v2.2.1</span>
+  </div>
+</div>
+
+<!-- DATA QUALITY SUCCESS -->
+<div class="al al-s" style="margin-bottom:18px">
+  <strong>✓ DATA QUALITY: PASS</strong> — All 180 cases have complete mandatory fields (100% Case Type coverage, 100% Due Date coverage, 100% Estimation coverage). Full 30-day time-fenced capacity analysis with 171 computable cases (95.0%) within planning fence.
+</div>
+
+<!-- EXECUTIVE SUMMARY CARDS -->
+<div class="sec">
+  <div class="sh">
+    <div class="sn">1</div>
+    <div class="st">Executive Summary</div>
+  </div>
+  <div class="cards">
+    <div class="cd dk">
+      <div class="ic">📋</div>
+      <div class="v">180</div>
+      <div class="l">Total Open Cases</div>
+    </div>
+    <div class="cd red">
+      <div class="ic">⚠️</div>
+      <div class="v">232.9%</div>
+      <div class="l">Avg Agent Capacity (30d)</div>
+    </div>
+    <div class="cd ros">
+      <div class="ic">🚨</div>
+      <div class="v">68.9%</div>
+      <div class="l">SLA Breach Rate</div>
+    </div>
+    <div class="cd org">
+      <div class="ic">🎯</div>
+      <div class="v">408.7%</div>
+      <div class="l">Peak Capacity (Rebecca)</div>
+    </div>
+    <div class="cd pur">
+      <div class="ic">📅</div>
+      <div class="v">60.1d</div>
+      <div class="l">Avg Case Age</div>
+    </div>
+    <div class="cd blu">
+      <div class="ic">🏢</div>
+      <div class="v">Alfa (28.9%)</div>
+      <div class="l">Top Risk Customer</div>
+    </div>
+  </div>
+</div>
+
+<!-- DEPARTMENT CAPACITY GAUGES -->
+<div class="dept-hero">
+  <h3>Department Capacity Overview (30-Day Time-Fenced)</h3>
+  <div class="gauge-row">
+    <div class="gauge-block">
+      <div class="gc">
+        <canvas id="deptGauge"></canvas>
+        <div class="gv big">232.9%</div>
+      </div>
+      <div class="lbl">Overall Capacity</div>
+    </div>
+    <div class="gauge-block">
+      <div class="gc">
+        <canvas id="normGauge"></canvas>
+        <div class="gv med vc">187.2%</div>
+      </div>
+      <div class="lbl">Normal Priority</div>
+    </div>
+    <div class="gauge-block">
+      <div class="gc">
+        <canvas id="highGauge"></canvas>
+        <div class="gv med ve">29.2%</div>
+      </div>
+      <div class="lbl">High Priority</div>
+    </div>
+  </div>
+  <div class="breakdown">
+    <strong>1</strong> agent >300% capacity &bull; 
+    <strong>5</strong> agents >200% capacity &bull; 
+    Highest: <strong>Rebecca Estephan at 408.7%</strong> (34 cases in fence)
+  </div>
+  <span class="status-tag overloaded">CRITICAL OVERLOAD - 232.9% AVG CAPACITY</span>
+</div>
+
+<!-- SECTION 2: AGENT PERFORMANCE DASHBOARD -->
+<div class="sec">
+  <div class="sh">
+    <div class="sn">2</div>
+    <div class="st">Agent Performance Dashboard</div>
+  </div>
+  
+  <div class="al al-i" style="margin-bottom:16px">
+    <strong>30-Day Time-Fenced Capacity Formula:</strong> Overall % = (Normal Est/128 × 100) + (High Est/16 × 100) + (Low Est/240 × 100)
+    <br>Normal Baseline: 128h (16d × 8h) | High Baseline: 16h (2d × 8h) | Low Baseline: 240h (30d × 8h)
+    <br><strong>Planning Fence:</strong> Only cases due ≤13 Mar 2026 with estimation >0 (171 of 180 cases = 95.0%)
+  </div>
+  
+  <div class="tw">
+    <table>
+      <thead>
+        <tr>
+          <th>Agent</th>
+          <th>Total Cases</th>
+          <th>Status</th>
+          <th style="min-width:180px">Capacity Visual (30d)</th>
+          <th>Overall %</th>
+          <th>Efficiency %</th>
+          <th>Avg Age</th>
+          <th>SLA Breach</th>
+          <th>Breach %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="rx">
+          <td><strong>Rebecca Estephan</strong></td>
+          <td>35</td>
+          <td><span class="b b-ex">EXTREME</span></td>
+          <td>
+            <div class="mb">
+              <div class="mb-bg"><div class="mb-f" style="width:100%;background:linear-gradient(90deg,#dc2626,#f97316)"></div></div>
+              <div class="mb-v ve">408.7%</div>
+            </div>
+          </td>
+          <td class="ve">408.7%</td>
+          <td class="vg">196.7%</td>
+          <td>54.2d</td>
+          <td>23 / 35</td>
+          <td class="vp">65.7%</td>
+        </tr>
+        <tr class="rc">
+          <td><strong>Fadi Hanna</strong></td>
+          <td>33</td>
+          <td><span class="b b-cr">CRITICAL</span></td>
+          <td>
+            <div class="mb">
+              <div class="mb-bg"><div class="mb-f" style="width:61.4%;background:linear-gradient(90deg,#ea580c,#fbbf24)"></div></div>
+              <div class="mb-v vc">251.2%</div>
+            </div>
+          </td>
+          <td class="vc">251.2%</td>
+          <td class="vp">49.9%</td>
+          <td>57.6d</td>
+          <td>18 / 33</td>
+          <td class="vp">54.5%</td>
+        </tr>
+        <tr class="rc">
+          <td><strong>Jana Sweid</strong></td>
+          <td>29</td>
+          <td><span class="b b-cr">CRITICAL</span></td>
+          <td>
+            <div class="mb">
+              <div class="mb-bg"><div class="mb-f" style="width:61.3%;background:linear-gradient(90deg,#ea580c,#fbbf24)"></div></div>
+              <div class="mb-v vc">250.5%</div>
+            </div>
+          </td>
+          <td class="vc">250.5%</td>
+          <td class="vm">75.3%</td>
+          <td>59.0d</td>
+          <td>22 / 29</td>
+          <td class="vp">75.9%</td>
+        </tr>
+        <tr class="rc">
+          <td><strong>Georges Mouaikel</strong></td>
+          <td>61</td>
+          <td><span class="b b-cr">CRITICAL</span></td>
+          <td>
+            <div class="mb">
+              <div class="mb-bg"><div class="mb-f" style="width:52.9%;background:linear-gradient(90deg,#ea580c,#fbbf24)"></div></div>
+              <div class="mb-v vc">216.4%</div>
+            </div>
+          </td>
+          <td class="vc">216.4%</td>
+          <td class="vp">39.8%</td>
+          <td>74.8d</td>
+          <td>50 / 61</td>
+          <td class="vp">82.0%</td>
+        </tr>
+        <tr class="rc">
+          <td><strong>Mennatullah El Bahr</strong></td>
+          <td>13</td>
+          <td><span class="b b-cr">CRITICAL</span></td>
+          <td>
+            <div class="mb">
+              <div class="mb-bg"><div class="mb-f" style="width:52.0%;background:linear-gradient(90deg,#ea580c,#fbbf24)"></div></div>
+              <div class="mb-v vc">212.6%</div>
+            </div>
+          </td>
+          <td class="vc">212.6%</td>
+          <td class="vm">95.1%</td>
+          <td>65.1d</td>
+          <td>11 / 13</td>
+          <td class="vp">84.6%</td>
+        </tr>
+        <tr>
+          <td><strong>Abdo Khoury</strong></td>
+          <td>8</td>
+          <td><span class="b b-lo">OK</span></td>
+          <td>
+            <div class="mb">
+              <div class="mb-bg"><div class="mb-f" style="width:14.1%;background:linear-gradient(90deg,#34d399,#6ee7b7)"></div></div>
+              <div class="mb-v vb">57.8%</div>
+            </div>
+          </td>
+          <td class="vb">57.8%</td>
+          <td class="vm">0.0%</td>
+          <td>31.5d</td>
+          <td>8 / 8</td>
+          <td class="vp">100.0%</td>
+        </tr>
+        <tr>
+          <td><strong>Unassigned Cases</strong></td>
+          <td>1</td>
+          <td><span class="b b-md">N/A</span></td>
+          <td>
+            <div class="mb">
+              <div class="mb-bg"><div class="mb-f" style="width:0%;background:#64748b"></div></div>
+              <div class="mb-v vm">0.0%</div>
+            </div>
+          </td>
+          <td class="vm">0.0%</td>
+          <td class="vm">0.0%</td>
+          <td>65.0d</td>
+          <td>1 / 1</td>
+          <td class="vp">100.0%</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  
+  <div class="al al-c" style="margin-top:16px">
+    <strong>CAPACITY CRISIS:</strong> 5 of 6 active agents (83.3%) exceed 200% capacity. Rebecca Estephan at 408.7% represents <strong>4.1× normal workload</strong>. Department average of 232.9% means agents are handling <strong>2.3× their sustainable capacity</strong>. Emergency workload redistribution or temporary staffing required within 48 hours.
+  </div>
+</div>
+
+<!-- SECTION 3: CAPACITY CRISIS HEATMAP -->
+<div class="sec">
+  <div class="sh">
+    <div class="sn">3</div>
+    <div class="st">30-Day Time-Fenced Capacity Analysis</div>
+  </div>
+  
+  <div class="cb full tall">
+    <h3>Overall Capacity % by Agent (Target: ≤100%) — Planning Fence: ≤13 Mar 2026</h3>
+    <canvas id="capChart"></canvas>
+  </div>
+  
+  <div class="al al-w" style="margin-top:16px">
+    <strong>CAPACITY BREAKDOWN:</strong> Of 180 total cases, 171 (95.0%) are due within the 30-day planning fence and included in capacity calculation. Rebecca Estephan's 408.7% comprises 382.0% Normal + 0.0% High + 26.7% Low priority work. Georges Mouaikel holds 61 cases (largest absolute count) at 216.4% capacity. Only Abdo Khoury operates below 100% at 57.8% (5 cases in fence).
+  </div>
+</div>
+
+<!-- SECTION 4: OPERATIONAL ANALYTICS -->
+<div class="sec">
+  <div class="sh">
+    <div class="sn">4</div>
+    <div class="st">Operational Analytics</div>
+  </div>
+  
+  <div class="cg">
+    <!-- Case Aging -->
+    <div class="cb">
+      <h3>Case Aging Distribution</h3>
+      <canvas id="ageChart"></canvas>
+    </div>
+    
+    <!-- Customer Concentration -->
+    <div class="cb">
+      <h3>Customer Concentration Risk</h3>
+      <canvas id="custPie"></canvas>
+    </div>
+    
+    <!-- Efficiency Comparison -->
+    <div class="cb">
+      <h3>Efficiency % by Agent (Target: ≥100%)</h3>
+      <canvas id="effChart"></canvas>
+    </div>
+    
+    <!-- SLA Compliance -->
+    <div class="cb">
+      <h3>SLA Compliance Rate</h3>
+      <div style="display:flex;justify-content:center;align-items:center;flex-direction:column;height:300px">
+        <div class="gc">
+          <canvas id="slaGauge"></canvas>
+          <div class="gv big">31.1%</div>
+        </div>
+        <div style="font-size:.78rem;color:#64748b;margin-top:12px;text-align:center">
+          124 of 180 cases in SLA breach &bull; Normal SLA: 16 days &bull; High SLA: 2 days &bull; Low SLA: 30 days
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 5: WORKLOAD COMPOSITION -->
+<div class="sec">
+  <div class="sh">
+    <div class="sn">5</div>
+    <div class="st">Workload Composition</div>
+  </div>
+  
+  <div class="cg">
+    <!-- Status Distribution -->
+    <div class="cb">
+      <h3>Case Status Distribution</h3>
+      <canvas id="statChart"></canvas>
+    </div>
+    
+    <!-- Case Type Breakdown -->
+    <div class="cb">
+      <h3>Case Type Breakdown</h3>
+      <canvas id="typeChart"></canvas>
+    </div>
+    
+    <!-- Monthly Throughput -->
+    <div class="cb full">
+      <h3>Monthly Throughput by Agent (Resolved Cases)</h3>
+      <canvas id="grpTP"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 6: CUSTOMER IMPACT ANALYSIS -->
+<div class="sec">
+  <div class="sh">
+    <div class="sn">6</div>
+    <div class="st">Customer Impact Analysis — Top 10</div>
+  </div>
+  
+  <div class="tw">
+    <table>
+      <thead>
+        <tr><th>#</th><th>Customer</th><th>Open Cases</th><th>% of Total</th><th>High Priority</th><th>Avg Age</th><th>Risk Level</th></tr>
+      </thead>
+      <tbody>
+        <tr class="rx">
+          <td>1</td>
+          <td><strong>Alfa</strong></td>
+          <td>52</td>
+          <td>28.9%</td>
+          <td>0</td>
+          <td>65.4d</td>
+          <td><span class="b b-ex">CRITICAL</span></td>
+        </tr>
+        <tr class="rc">
+          <td>2</td>
+          <td><strong>Holdal</strong></td>
+          <td>30</td>
+          <td>16.7%</td>
+          <td>1</td>
+          <td>57.7d</td>
+          <td><span class="b b-hi">HIGH</span></td>
+        </tr>
+        <tr class="rc">
+          <td>3</td>
+          <td>Bromine</td>
+          <td>19</td>
+          <td>10.6%</td>
+          <td>0</td>
+          <td>58.5d</td>
+          <td><span class="b b-hi">HIGH</span></td>
+        </tr>
+        <tr class="rc">
+          <td>4</td>
+          <td>Hugo Boss</td>
+          <td>13</td>
+          <td>7.2%</td>
+          <td>0</td>
+          <td>42.3d</td>
+          <td><span class="b b-hi">HIGH</span></td>
+        </tr>
+        <tr class="rc">
+          <td>5</td>
+          <td>Info-sys</td>
+          <td>13</td>
+          <td>7.2%</td>
+          <td>0</td>
+          <td>62.2d</td>
+          <td><span class="b b-hi">HIGH</span></td>
+        </tr>
+        <tr class="rc">
+          <td>6</td>
+          <td>Kurban Group</td>
+          <td>10</td>
+          <td>5.6%</td>
+          <td>0</td>
+          <td>110.1d</td>
+          <td><span class="b b-hi">HIGH</span></td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>Engicon</td>
+          <td>7</td>
+          <td>3.9%</td>
+          <td>2</td>
+          <td>51.0d</td>
+          <td><span class="b b-md">MEDIUM</span></td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>Second House</td>
+          <td>5</td>
+          <td>2.8%</td>
+          <td>0</td>
+          <td>52.4d</td>
+          <td><span class="b b-md">MEDIUM</span></td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td>Etisalat</td>
+          <td>4</td>
+          <td>2.2%</td>
+          <td>0</td>
+          <td>28.2d</td>
+          <td><span class="b b-md">MEDIUM</span></td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td>GnTech</td>
+          <td>4</td>
+          <td>2.2%</td>
+          <td>0</td>
+          <td>47.0d</td>
+          <td><span class="b b-md">MEDIUM</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  
+  <div class="al al-w" style="margin-top:16px">
+    <strong>Customer Concentration Risk:</strong> Alfa (28.9%) and Holdal (16.7%) together hold 82 cases — 45.6% of total department workload. Alfa alone represents nearly 1/3 of all open cases with average age of 65.4 days. This creates critical single-customer dependency and escalation vulnerability.
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="ft">
+  <strong>Support Unit Management Report</strong> &nbsp;&bull;&nbsp; Snapshot: 11 February 2026 &nbsp;&bull;&nbsp; 
+  Generated by Senior Operations Manager &amp; D365 F&amp;O Solution Architect<br>
+  <strong>Data Sources:</strong> Open Cases (180 records) &bull; Resolved Cases (970 records) &bull; Agents: 6 active + 1 (Unassigned)<br>
+  <strong>Data Quality:</strong> ✓ PASS (100% field coverage) &bull; Capacity Computable: 171/180 cases (95.0%)<br>
+  <div class="fm">
+CAPACITY FORMULA: Overall_Capacity_% = (Normal_Est_Hours / 128 × 100) + (High_Est_Hours / 16 × 100) + (Low_Est_Hours / 240 × 100)<br>
+&nbsp;&nbsp;Normal Baseline = 128h (16 working days × 8h/day) | High Baseline = 16h (2 working days × 8h/day) | Low Baseline = 240h (30 working days × 8h/day)<br>
+EFFICIENCY FORMULA: (Total_Estimated_Duration / Total_Actual_Duration) × 100<br>
+SLA THRESHOLDS: Normal Priority = 16 days | High Priority = 2 days | Low Priority = 30 days<br>
+PLANNING FENCE: Report Date + 30 days (11 Feb 2026 + 30d = 13 Mar 2026)<br>
+DATA QUALITY: <strong style="color:#34d399">✓ PASS</strong> (100% coverage on all mandatory fields) | COMPLIANCE: PRMT01-E v2.2.1
+  </div>
+</div>
+
+</div>
+
+<script>
+Chart.defaults.color='#94a3b8';
+Chart.defaults.font.family="'Aptos','Segoe UI',system-ui,sans-serif";
+Chart.defaults.font.size=12;
+Chart.defaults.plugins.legend.labels.usePointStyle=true;
+Chart.defaults.plugins.legend.labels.pointStyle='circle';
+
+// Gauge helper
+function makeGauge(id, val, max, ok, warn){
+  const pct = Math.min(val/max, 1);
+  const col = val > warn ? 'rgba(239,68,68,.75)' : val > ok ? 'rgba(251,146,60,.75)' : 'rgba(52,211,153,.75)';
+  new Chart(document.getElementById(id), {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [pct*100, (1-pct)*100],
+        backgroundColor: [col, 'rgba(255,255,255,.06)'],
+        borderWidth: 0,
+        circumference: 180,
+        rotation: 270
+      }]
+    },
+    options: {
+      responsive: false,
+      cutout: '75%',
+      plugins: {legend: {display: false}, tooltip: {enabled: false}}
+    }
+  });
+}
+
+// Department gauges
+makeGauge('deptGauge', 232.9, 400, 100, 200);
+makeGauge('normGauge', 187.2, 300, 100, 150);
+makeGauge('highGauge', 29.2, 200, 80, 100);
+makeGauge('slaGauge', 31.1, 100, 60, 40);
+
+// Capacity heatmap
+new Chart(document.getElementById('capChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Rebecca Estephan','Fadi Hanna','Jana Sweid','Georges Mouaikel','Mennatullah El Bahr','Abdo Khoury'],
+    datasets: [
+      {label: 'Normal Cap %', data: [382.0, 244.5, 167.2, 216.4, 49.2, 57.8], backgroundColor: 'rgba(251,146,60,.7)', borderRadius: 4},
+      {label: 'High Cap %', data: [0, 0, 25.0, 0, 150.0, 0], backgroundColor: 'rgba(239,68,68,.7)', borderRadius: 4},
+      {label: 'Low Cap %', data: [26.7, 6.7, 58.3, 0, 13.3, 0], backgroundColor: 'rgba(251,191,36,.7)', borderRadius: 4}
+    ]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    scales: {
+      x: {stacked: true, grid: {color: 'rgba(124,58,237,.08)'}, title: {display: true, text: 'Capacity %', color: '#a78bfa', font: {weight: 'bold'}}, ticks: {callback: v => v + '%'}},
+      y: {stacked: true, grid: {display: false}, ticks: {font: {weight: 'bold', size: 13}}}
+    },
+    plugins: {
+      legend: {position: 'top'},
+      tooltip: {callbacks: {label: ctx => ctx.dataset.label + ': ' + ctx.raw.toFixed(1) + '%'}}
+    }
+  }
+});
+
+// Efficiency chart
+new Chart(document.getElementById('effChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Rebecca Estephan','Mennatullah El Bahr','Jana Sweid','Fadi Hanna','Georges Mouaikel','Abdo Khoury'],
+    datasets: [{
+      label: 'Efficiency %',
+      data: [196.7, 95.1, 75.3, 49.9, 39.8, 0],
+      backgroundColor: ['rgba(52,211,153,.75)','rgba(251,191,36,.7)','rgba(251,191,36,.7)','rgba(239,68,68,.7)','rgba(239,68,68,.7)','rgba(100,116,139,.5)'],
+      borderRadius: 6,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: {legend: {display: false}},
+    scales: {
+      x: {grid: {color: 'rgba(124,58,237,.08)'}, ticks: {callback: v => v + '%'}},
+      y: {grid: {display: false}, ticks: {font: {weight: 'bold'}}}
+    }
+  }
+});
+
+// Case aging
+new Chart(document.getElementById('ageChart'), {
+  type: 'bar',
+  data: {
+    labels: ['0-5d','6-10d','11-16d','17-30d','31-60d','61-90d','91+d'],
+    datasets: [{
+      label: 'Cases',
+      data: [24, 21, 11, 25, 34, 19, 46],
+      backgroundColor: ['rgba(52,211,153,.7)','rgba(52,211,153,.7)','rgba(251,191,36,.7)','rgba(251,146,60,.7)','rgba(239,68,68,.6)','rgba(220,38,38,.7)','rgba(153,27,27,.8)'],
+      borderRadius: 6,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {legend: {display: false}},
+    scales: {
+      y: {grid: {color: 'rgba(124,58,237,.08)'}, title: {display: true, text: 'Cases', color: '#a78bfa'}},
+      x: {grid: {display: false}}
+    }
+  }
+});
+
+// Customer pie
+new Chart(document.getElementById('custPie'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Alfa (52)','Holdal (30)','Bromine (19)','Hugo Boss (13)','Info-sys (13)','Others (53)'],
+    datasets: [{
+      data: [52, 30, 19, 13, 13, 53],
+      backgroundColor: ['#dc2626','#ea580c','#f59e0b','#8b5cf6','#3b82f6','#475569'],
+      borderWidth: 2,
+      borderColor: '#0a0a14',
+      hoverOffset: 14
+    }]
+  },
+  options: {
+    responsive: true,
+    cutout: '55%',
+    plugins: {
+      legend: {position: 'right', labels: {padding: 14, font: {size: 11}}},
+      tooltip: {callbacks: {label: ctx => {const pct = (ctx.raw / 180 * 100).toFixed(1); return ctx.label + ' — ' + pct + '%';}}}
+    }
+  }
+});
+
+// Status distribution
+new Chart(document.getElementById('statChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Not Started','In Progress','Pend. Client Confirm','Pending Dev','Pending Customer','Estimation','Researching','Req. Gathering'],
+    datasets: [{
+      label: 'Cases',
+      data: [43, 42, 34, 21, 15, 8, 4, 4],
+      backgroundColor: ['rgba(99,102,241,.7)','rgba(52,211,153,.7)','rgba(251,146,60,.7)','rgba(239,68,68,.6)','rgba(251,191,36,.7)','rgba(139,92,246,.6)','rgba(148,163,184,.5)','rgba(100,116,139,.5)'],
+      borderRadius: 4,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: {legend: {display: false}},
+    scales: {
+      x: {grid: {color: 'rgba(124,58,237,.08)'}},
+      y: {grid: {display: false}, ticks: {font: {size: 11}}}
+    }
+  }
+});
+
+// Case type pie
+new Chart(document.getElementById('typeChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Development','Functional Issue','New Request','R&D','Budget','Migration','Sys Admin','Training'],
+    datasets: [{
+      data: [109, 16, 11, 6, 6, 5, 5, 4],
+      backgroundColor: ['#7c3aed','#ec4899','#f59e0b','#10b981','#3b82f6','#6366f1','#f43f5e','#14b8a6'],
+      borderWidth: 2,
+      borderColor: '#0a0a14',
+      hoverOffset: 10
+    }]
+  },
+  options: {
+    responsive: true,
+    cutout: '50%',
+    plugins: {legend: {position: 'right', labels: {padding: 10, font: {size: 10}}}}
+  }
+});
+
+// Monthly throughput
+new Chart(document.getElementById('grpTP'), {
+  type: 'bar',
+  data: {
+    labels: ['Sep 2025','Oct 2025','Nov 2025','Dec 2025','Jan 2026','Feb 2026*'],
+    datasets: [
+      {label: 'Georges Mouaikel', data: [87,91,56,63,71,3], backgroundColor: 'rgba(139,92,246,.75)'},
+      {label: 'Rebecca Estephan', data: [56,46,40,38,31,7], backgroundColor: 'rgba(239,68,68,.7)'},
+      {label: 'Fadi Hanna', data: [39,25,41,34,39,12], backgroundColor: 'rgba(251,146,60,.7)'},
+      {label: 'Jana Sweid', data: [16,18,10,12,21,2], backgroundColor: 'rgba(56,189,248,.7)'},
+      {label: 'Mennatullah El Bahr', data: [0,10,6,13,23,13], backgroundColor: 'rgba(52,211,153,.7)'},
+      {label: 'Abdo Khoury', data: [6,13,8,9,7,3], backgroundColor: 'rgba(251,191,36,.7)'}
+    ]
+  },
+  options: {
+    responsive: true,
+    scales: {
+      x: {grid: {display: false}},
+      y: {grid: {color: 'rgba(124,58,237,.08)'}, title: {display: true, text: 'Cases Resolved', color: '#a78bfa'}, beginAtZero: true}
+    },
+    plugins: {
+      legend: {position: 'bottom', labels: {padding: 12, font: {size: 10.5}}}
+    }
+  }
+});
+
+</script>
+</body>
+</html>
