@@ -23,8 +23,25 @@ This document is the **single source of truth** for generating Support Departmen
 ## 2. DATA SOURCES & INPUT
 
 ### Excel Files (in `data/` folder)
-- **Open Cases:** `Support Unit Open Cases {M}-{DD}-{YYYY} {time}.xlsx`
-- **Resolved Cases:** `Support Unit Resolved Cases {M}-{DD}-{YYYY} {time}.xlsx`
+- **Open Cases:** `Support Unit Open Cases {M}-{DD}-{YYYY} {h}-{mm}-{ss} {AM/PM}.xlsx`
+- **Resolved Cases:** `Support Unit Resolved Cases {M}-{DD}-{YYYY} {h}-{mm}-{ss} {AM/PM}.xlsx`
+
+> **IMPORTANT — File Selection:**
+> The `data/` folder may contain **multiple versions** of each file from different dates/times.
+> New files are added without removing old ones. You MUST always pick the **latest** file of each type.
+>
+> **How to find the latest files:**
+> ```python
+> import glob, os
+>
+> open_files = sorted(glob.glob('data/Support Unit Open Cases *.xlsx'), key=os.path.getmtime, reverse=True)
+> resolved_files = sorted(glob.glob('data/Support Unit Resolved Cases *.xlsx'), key=os.path.getmtime, reverse=True)
+>
+> open_path = open_files[0]       # latest open cases file
+> resolved_path = resolved_files[0]  # latest resolved cases file
+> ```
+> Always print which files were selected so the user can verify.
+> Extract the report date from the open cases filename (the `{M}-{DD}-{YYYY}` portion).
 
 ### Key Columns Used
 | Column | Purpose |
@@ -46,9 +63,26 @@ This document is the **single source of truth** for generating Support Departmen
 
 Execute these steps IN THIS EXACT ORDER. Do not skip or reorder.
 
-### Step 1: Read Excel File
+### Step 1: Find Latest Files & Read
 ```python
-open_df = pd.read_excel(file_path)
+import glob, os, re
+from datetime import datetime
+
+# Auto-detect latest files (data/ folder may have multiple versions)
+open_files = sorted(glob.glob('data/Support Unit Open Cases *.xlsx'), key=os.path.getmtime, reverse=True)
+resolved_files = sorted(glob.glob('data/Support Unit Resolved Cases *.xlsx'), key=os.path.getmtime, reverse=True)
+
+open_path = open_files[0]
+resolved_path = resolved_files[0]
+print(f"Using Open Cases:     {open_path}")
+print(f"Using Resolved Cases: {resolved_path}")
+
+# Extract report date from filename (e.g. "2-13-2026" → 13 Feb 2026)
+date_match = re.search(r'(\d{1,2})-(\d{1,2})-(\d{4})', open_path)
+REPORT_DATE = datetime(int(date_match.group(3)), int(date_match.group(1)), int(date_match.group(2)))
+
+open_df = pd.read_excel(open_path)
+resolved_df = pd.read_excel(resolved_path)
 ```
 
 ### Step 2: Filter for Department Agents
