@@ -3,15 +3,18 @@
 ## COMPLETE REFERENCE FOR REPORT GENERATION
 
 This document is the **single source of truth** for generating Support Department Performance Reports.
-Follow it exactly to avoid repeating past mistakes. When in doubt, refer to `best_report_format/reference_design.html`.
+
+> **CRITICAL:** The authoritative design template is **`best_report_format/Reference_Design.html`**.
+> All components, sections, CSS classes, chart types, color schemes, and layout MUST match that file exactly.
+> When in doubt, open and inspect `Reference_Design.html` — it overrides anything described here.
 
 ---
 
 ## 1. OVERVIEW & FILE NAMING
 
-- **Report Title:** `D365 F&O Support Report – {DD} {Mon} {YYYY} (v2.3.0)`
+- **Report Title:** `D365 F&O Support Report — {DD} {Mon} {YYYY}`
 - **File Name:** `SupportDepartmentPerformance{YYYYMMDD}-{N}.html` where N is the version number for that day
-- **Reference Design:** `best_report_format/reference_design.html` — the HTML template to match exactly
+- **Design Template:** `best_report_format/Reference_Design.html` — copy CSS, structure, and class names from this file
 - **Technology:** Single-file HTML5 with embedded CSS and Chart.js 4.4.1 via CDN
 - **CDN:** `https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js`
 
@@ -30,11 +33,12 @@ Follow it exactly to avoid repeating past mistakes. When in doubt, refer to `bes
 | Status Reason | Active vs pending filtering |
 | Due Date | Planning fence + SLA calculation |
 | Initial Estimation Duration | Capacity calculation (in hours) |
-| Case Type | Classification |
+| Case Type | Classification + Case Type Breakdown chart |
 | Priority | Normal / High / Low — determines SLA threshold |
 | Customer | Customer impact analysis |
 | Age | Case aging distribution |
 | Actual Duration | Efficiency calculation (resolved cases) |
+| Created On / Deactivated On | Monthly throughput calculation (resolved cases) |
 
 ---
 
@@ -88,7 +92,7 @@ excluded_by_status = total_before_status_filter - total_after_status_filter
 **EXCLUDE all other statuses** including: Pending Client Confirmation, Pending Dev, Pending Customer, Pending Delivery Date, Waiting on Customer, Waiting on Third Party, On Hold, and any others not in the approved list.
 
 ### Step 5: Data Quality Audit (on filtered dataset)
-- Check mandatory fields: Due Date, Initial Estimation Duration
+- Check mandatory fields: Due Date, Initial Estimation Duration, Case Type
 - Report coverage percentages
 - Note any missing data
 
@@ -138,7 +142,7 @@ Baselines:
 ```
 Efficiency_% = (Total_Estimated_Duration / Total_Actual_Duration) × 100
 
-Uses RESOLVED cases data. Show "—" if agent has no resolved cases in period.
+Uses RESOLVED cases data. Show "0.0%" if agent has no resolved cases or zero actual duration.
 ```
 
 ### SLA Breach
@@ -150,233 +154,349 @@ SLA Thresholds:
 
 A case is in SLA breach if its Age exceeds the threshold for its priority.
 Breach_% = (breached_cases / total_cases) × 100
+SLA_Compliance_% = 100 - overall_breach_%
 ```
 
 ### Agent Status Badge
 ```
-If Capacity > 100% → OVERLOAD (badge-overload, row-overload)
-If Capacity ≤ 100% → OK (badge-ok, row-ok)
+If Capacity > 300% → EXTREME  (badge .b-ex, row .rx)
+If Capacity > 100% → CRITICAL (badge .b-cr, row .rc)
+If Capacity ≤ 100% → OK       (badge .b-lo)
+Unassigned Cases   → N/A      (badge .b-md)
 ```
 
 ### Customer Risk Level
 ```
-CRITICAL: ≥20% of total cases OR avg age >50d with high case count
-HIGH:     ≥10% of total cases OR avg age >40d
-MEDIUM:   All others with ≥3 cases
+CRITICAL: ≥20% of total cases OR avg age >50d with high case count  → badge .b-ex, row .rx
+HIGH:     ≥10% of total cases OR avg age >40d                       → badge .b-hi, row .rc
+MEDIUM:   All others with ≥3 cases                                  → badge .b-md
 ```
 
 ---
 
-## 6. HTML REPORT STRUCTURE (EXACT SECTION ORDER)
+## 6. HTML REPORT STRUCTURE
 
-**DO NOT change this order. It must match the reference design.**
+> **Source of truth:** `best_report_format/Reference_Design.html`
+> Copy the exact HTML structure, CSS classes, and section order from that file.
+> Replace only the data values (numbers, names, percentages, chart data arrays).
 
-### 6.1 Header
-```html
-<div class="header">
-  <h1>📊 Dynamics 365 Finance & Operations Support Report</h1>
-  <div class="sub">Support Department — Executive Performance Analysis</div>
-  <div class="meta">SNAPSHOT: {DD} {MON} {YYYY} • ACTIVE: {N} CASES • EXCLUDED: {N} PENDING/WAITING • VERSION: PRMT01-E v2.3.0</div>
-  <div class="tags">
-    <span class="tag">✅ DATA QUALITY: PASS</span>
-    <span class="tag">🎯 STATUS FILTERED</span>
-    <span class="tag">📆 30-DAY FENCE</span>
-  </div>
-</div>
-```
+### Section Order (MUST match Reference_Design.html exactly)
 
-### 6.2 Status Filter Disclosure Box
-- Blue gradient background (`linear-gradient(135deg,#1e3a8a,#1e40af)`)
-- Title: "🎯 STATUS REASON FILTERING (v2.3.0)"
-- Explanation paragraph
-- 4 stat cards: Total In System, Active (Included), Excluded, Exclusion Rate
-- List of active status reasons with counts
+| # | Section | CSS Class | Description |
+|---|---------|-----------|-------------|
+| — | Header | `.hdr` | Title, subtitle, tag pills |
+| — | Data Quality Alert | `.al.al-s` | Green success alert |
+| 1 | Executive Summary | `.sec` `.sn`=1 | 6 metric cards |
+| — | Dept Capacity Gauges | `.dept-hero` | 3 half-doughnut gauges + breakdown |
+| 2 | Agent Performance Dashboard | `.sec` `.sn`=2 | Info alert + 9-column table + critical alert |
+| 3 | 30-Day Capacity Analysis | `.sec` `.sn`=3 | Full-width stacked bar chart + warning alert |
+| 4 | Operational Analytics | `.sec` `.sn`=4 | 2×2 chart grid |
+| 5 | Workload Composition | `.sec` `.sn`=5 | 2+1 chart grid |
+| 6 | Customer Impact — Top 10 | `.sec` `.sn`=6 | 7-column table + warning alert |
+| — | Footer | `.ft` | Attribution + formula box |
 
-### 6.3 Section 1: Executive Summary
-- 6 metric cards in a responsive grid:
-  1. **Active Cases** (card.dark) — total filtered count
-  2. **Avg Agent Capacity** (card.green) — average of all agents
-  3. **Agents >100% Capacity** (card.purple) — count fraction like "5/6"
-  4. **Peak Capacity** (card.orange) — highest agent name + %
-  5. **Avg Case Age** (card.blue) — average days
-  6. **Top Customer** (card.dark) — name + % of workload
+### 6.1 Header (`.hdr`)
+- H1: `Dynamics 365 Finance & Operations Support Report`
+- Sub: `Support Department — Executive Performance Analysis`
+- Tags (`.tag` pills): SNAPSHOT date, OPEN case count, AGENTS count, DATA QUALITY status, COMPLIANCE version
+- See Reference_Design.html lines 116–126
 
-### 6.4 Section 2: Data Quality & Capacity Overview
-- Green alert box: data quality summary (coverage %)
-- Full-width capacity chart (`chart-box full`) — horizontal bar
-- Blue info alert: capacity formula, planning fence date, status filtering note
+### 6.2 Data Quality Alert (`.al.al-s`)
+- Green success alert with field coverage percentages
+- Includes planning fence computable case count
+- See Reference_Design.html lines 129–131
 
-### 6.5 Section 3: Agent Performance Dashboard
-- 8-column table:
+### 6.3 Section 1: Executive Summary — 6 Cards
+| # | Card Class | Icon | Value | Label |
+|---|-----------|------|-------|-------|
+| 1 | `.cd.dk` | 📋 | Total case count | Total Open Cases |
+| 2 | `.cd.red` | ⚠️ | Avg capacity % | Avg Agent Capacity (30d) |
+| 3 | `.cd.ros` | 🚨 | Breach rate % | SLA Breach Rate |
+| 4 | `.cd.org` | 🎯 | Peak % (agent name) | Peak Capacity (Agent) |
+| 5 | `.cd.pur` | 📅 | Avg age days | Avg Case Age |
+| 6 | `.cd.blu` | 🏢 | Customer name (%) | Top Risk Customer |
+- See Reference_Design.html lines 134–171
 
-| Column | Content |
-|--------|---------|
-| Agent | Name (bold) |
-| Status | OVERLOAD or OK badge |
-| Cases | Active case count |
-| Capacity % | With v-overload/v-ok class |
-| Efficiency % | With v-good/v-poor class, or "—" |
-| Avg Age | Days with 1 decimal |
-| SLA Breach | Format: "X / Y" |
-| Breach % | With color class |
+### 6.4 Department Capacity Gauge Hero (`.dept-hero`)
+- 3 half-doughnut gauge charts using the `makeGauge()` helper function:
+  1. **Overall Capacity** (`.gc` #deptGauge) — large value (`.gv.big`)
+  2. **Normal Priority** (`.gc` #normGauge) — medium value (`.gv.med`)
+  3. **High Priority** (`.gc` #highGauge) — medium value (`.gv.med`)
+- Breakdown text: agents >300%, agents >200%, highest agent name + capacity
+- Status tag: `.status-tag.overloaded` with overall status text
+- See Reference_Design.html lines 174–205
 
-- Orange warning alert below: capacity alert text
+### 6.5 Section 2: Agent Performance Dashboard
+- Blue info alert (`.al.al-i`) with capacity formula and planning fence
+- **9-column table:**
 
-### 6.6 Section 4: Operational Analytics
-- 2×2 chart grid (`chart-grid`):
-  1. **Case Aging Distribution** — vertical bar, 6 buckets
-  2. **Customer Concentration (Top 5 + Others)** — doughnut
-  3. **Priority Distribution** — pie
-  4. **Status Reason Distribution (Active Only)** — horizontal bar
+| Column | Content | Notes |
+|--------|---------|-------|
+| Agent | Name (bold) | |
+| Total Cases | Count | |
+| Status | Badge | `.b-ex` EXTREME / `.b-cr` CRITICAL / `.b-lo` OK / `.b-md` N/A |
+| Capacity Visual | Mini bar (`.mb`) | Gradient fill with percentage |
+| Overall % | Value with color class | `.ve` extreme / `.vc` critical / `.vb` blue / `.vm` medium |
+| Efficiency % | Value with color class | `.vg` good / `.vm` medium / `.vp` poor |
+| Avg Age | Days with 1 decimal | |
+| SLA Breach | Format: "X / Y" | |
+| Breach % | With `.vp` color class | |
 
-### 6.7 Section 5: Customer Impact Analysis — Top 10
-- 7-column table:
+- **Mini bar visual** in Capacity Visual column: `<div class="mb"><div class="mb-bg"><div class="mb-f" style="width:{pct}%;background:{gradient}"></div></div><div class="mb-v {colorclass}">{value}%</div></div>`
+- Row classes: `.rx` for EXTREME, `.rc` for CRITICAL, none for OK
+- Red critical alert (`.al.al-c`) below table with capacity crisis narrative
+- See Reference_Design.html lines 207–355
+
+### 6.6 Section 3: 30-Day Time-Fenced Capacity Analysis
+- Full-width tall chart box (`.cb.full.tall`)
+- **Stacked horizontal bar chart** (#capChart) with 3 datasets:
+  - Normal Cap % (orange `rgba(251,146,60,.7)`)
+  - High Cap % (red `rgba(239,68,68,.7)`)
+  - Low Cap % (yellow `rgba(251,191,36,.7)`)
+- Agents sorted by total capacity descending (excluding Unassigned)
+- Orange warning alert (`.al.al-w`) with capacity breakdown narrative
+- See Reference_Design.html lines 358–372
+
+### 6.7 Section 4: Operational Analytics — 2×2 Grid (`.cg`)
+| # | Chart Title | Type | Canvas ID | Details |
+|---|------------|------|-----------|---------|
+| 1 | Case Aging Distribution | Vertical bar | #ageChart | 7 buckets: 0-5d, 6-10d, 11-16d, 17-30d, 31-60d, 61-90d, 91+d |
+| 2 | Customer Concentration Risk | Doughnut | #custPie | Top 5 + Others, cutout 55%, legend right |
+| 3 | Efficiency % by Agent | Horizontal bar | #effChart | Sorted by efficiency desc, color-coded |
+| 4 | SLA Compliance Rate | Gauge | #slaGauge | Half-doughnut with compliance %, text below |
+- See Reference_Design.html lines 374–413
+
+### 6.8 Section 5: Workload Composition — 2+1 Grid (`.cg`)
+| # | Chart Title | Type | Canvas ID | Details |
+|---|------------|------|-----------|---------|
+| 1 | Case Status Distribution | Horizontal bar | #statChart | All status reasons sorted by count desc |
+| 2 | Case Type Breakdown | Doughnut | #typeChart | All case types, cutout 50%, legend right |
+| 3 | Monthly Throughput by Agent | Grouped bar (full-width) | #grpTP | Last 6 months, per-agent resolved cases |
+- See Reference_Design.html lines 416–442
+
+### 6.9 Section 6: Customer Impact Analysis — Top 10
+- **7-column table:**
 
 | Column | Content |
 |--------|---------|
 | # | Rank number |
-| Customer | Name (bold for top 3) |
-| Active Cases | Count |
+| Customer | Name (bold for top rows) |
+| Open Cases | Count |
 | % of Total | Percentage |
 | High Priority | Count of high priority cases |
 | Avg Age | Days with 1 decimal |
 | Risk Level | CRITICAL / HIGH / MEDIUM badge |
 
-- Orange warning alert below: customer concentration risk text
+- Row classes: `.rx` for CRITICAL, `.rc` for HIGH, none for MEDIUM
+- Orange warning alert (`.al.al-w`) with customer concentration risk narrative
+- See Reference_Design.html lines 444–554
 
-### 6.8 Footer
-```html
-<div class="footer">
-  <strong>Support Unit Executive Performance Report</strong> • Snapshot: {date} • Generated by Senior Operations Manager & D365 F&O Solution Architect<br>
-  <strong>Data Sources:</strong> Active Cases ({N} filtered from {total} total) • Planning Fence: ≤{fence date} • Agents: 6 active + 1 Unassigned<br>
-  <strong>Version:</strong> PRMT01-E v2.3.0 (Status Reason Filtering + 30-Day Time-Fenced Capacity + Data Quality Audit)<br>
-  <div class="formula">
-    CAPACITY FORMULA: Overall_Capacity_% = (Normal_Est_Hours / 128 × 100) + (High_Est_Hours / 16 × 100) + (Low_Est_Hours / 240 × 100)
-    Normal Baseline = 128h (16 days × 8h) | High Baseline = 16h (2 days × 8h) | Low Baseline = 240h (30 days × 8h)
-    STATUS FILTERING (v2.3.0): Only active work states included (8 approved status reasons)
-    EXCLUDED: Pending/Waiting states ({N} cases, {X}%) — not actively consuming capacity
-    EFFICIENCY FORMULA: (Total_Estimated_Duration / Total_Actual_Duration) × 100
-    SLA THRESHOLDS: Normal Priority = 16 days | High Priority = 2 days | Low Priority = 30 days
-  </div>
-</div>
-```
+### 6.10 Footer (`.ft`)
+- Attribution line: report title, snapshot date, "Generated by Senior Operations Manager & D365 F&O Solution Architect"
+- Data Sources line: open case count, resolved case count, agent count
+- Data Quality line: pass/fail status, capacity computable count
+- Formula box (`.fm`): capacity formula, baselines, efficiency formula, SLA thresholds, planning fence, data quality status + compliance version
+- See Reference_Design.html lines 557–570
 
 ---
 
 ## 7. DESIGN SYSTEM & CSS
 
-### Colors
+> **Source of truth:** `best_report_format/Reference_Design.html` `<style>` block (lines 8–110).
+> Copy the entire `<style>` block from Reference_Design.html into each generated report.
+> The class names below are abbreviated — this is intentional; match the Reference_Design.html exactly.
+
+### Key CSS Classes (abbreviated names from Reference_Design.html)
+
+| Reference Class | Purpose |
+|----------------|---------|
+| `.w` | Wrapper container (max-width: 1360px) |
+| `.hdr` | Header block (purple gradient + SVG pattern) |
+| `.cd` | Metric card base |
+| `.cd.dk` | Dark card (indigo gradient + purple border) |
+| `.cd.red` | Red card (red → orange gradient) |
+| `.cd.org` | Orange card (orange → yellow gradient) |
+| `.cd.pur` | Purple card |
+| `.cd.blu` | Blue card (sky → cyan gradient) |
+| `.cd.ros` | Rose card (crimson → pink gradient) |
+| `.cd.grn` | Green card (emerald gradient) |
+| `.v` | Card value (2.4rem, 900 weight) |
+| `.l` | Card label (uppercase, 0.72rem) |
+| `.ic` | Card icon (emoji) |
+| `.sec` | Section container |
+| `.sh` | Section header (flex row with number + title) |
+| `.sn` | Section number circle (purple gradient) |
+| `.st` | Section title text (light purple) |
+| `.dept-hero` | Department gauge hero section |
+| `.gc` | Gauge chart container (250×145px) |
+| `.gv` | Gauge value overlay |
+| `.cg` | Chart grid (2-column) |
+| `.cb` | Chart box (dark gradient, purple border) |
+| `.cb.full` | Full-width chart box |
+| `.cb.tall` | Tall chart box (max-height: 440px) |
+| `.tw` | Table wrapper (rounded, shadowed) |
+| `.b` | Badge base (inline-block, pill shape) |
+| `.b-ex` | Badge EXTREME (solid red bg, white text) |
+| `.b-cr` | Badge CRITICAL (red bg 15%, red text) |
+| `.b-hi` | Badge HIGH (orange bg 15%, orange text) |
+| `.b-md` | Badge MEDIUM/N/A (yellow bg 15%, yellow text) |
+| `.b-lo` | Badge LOW/OK (green bg 15%, green text) |
+| `.ve` | Value extreme (red #f87171, 800 weight) |
+| `.vc` | Value critical (orange #fb923c, 700 weight) |
+| `.vg` | Value good (green #34d399, 700 weight) |
+| `.vm` | Value medium (yellow #fbbf24, 600 weight) |
+| `.vp` | Value poor (red #f87171, 600 weight) |
+| `.vb` | Value blue (#60a5fa, 600 weight) |
+| `.mb` | Mini bar container |
+| `.mb-bg` | Mini bar background track |
+| `.mb-f` | Mini bar fill (colored, variable width) |
+| `.mb-v` | Mini bar value label |
+| `.al` | Alert base |
+| `.al-s` | Alert success (green border #10b981) |
+| `.al-i` | Alert info (blue border #3b82f6) |
+| `.al-w` | Alert warning (orange border #ea580c) |
+| `.al-c` | Alert critical (red border #dc2626) |
+| `.rx` | Table row extreme/critical (red bg 10%) |
+| `.rc` | Table row caution (orange bg 6%) |
+| `.ft` | Footer container |
+| `.fm` | Footer formula box (monospace, green text) |
+
+### Core Colors
 | Element | Color |
 |---------|-------|
-| Body background | `#0f0f1a` |
+| Body background | `#0a0a14` |
 | Body text | `#e2e8f0` |
-| Primary accent | `#7c3aed` |
-| Light accent | `#a78bfa` |
-| Dark accent | `#4c1d95` |
+| Wrapper max-width | `1360px` |
+| Header gradient | `#4c1d95` → `#6d28d9` → `#7c3aed` → `#a78bfa` |
 | Section title text | `#c4b5fd` |
-| Table background | `#1a1a2e` |
-| Chart box gradient | `#1e1b4b` → `#0f0f1a` |
-
-### Card Classes
-| Class | Gradient |
-|-------|----------|
-| `.card.green` | `#10b981` → `#34d399` |
-| `.card.orange` | `#ea580c` → `#facc15` |
-| `.card.purple` | `#7c3aed` → `#c084fc` |
-| `.card.dark` | `#1e1b4b` → `#312e81` (+ purple border) |
-| `.card.blue` | `#0369a1` → `#22d3ee` |
-
-### Badge Classes
-| Class | Background | Text Color |
-|-------|------------|------------|
-| `.badge-overload` | `rgba(250,204,21,.15)` | `#fde047` |
-| `.badge-ok` | `rgba(34,197,94,.15)` | `#86efac` |
-| `.badge-critical` | `rgba(220,38,38,.15)` | `#fca5a5` |
-| `.badge-high` | `rgba(234,88,12,.15)` | `#fdba74` |
-| `.badge-medium` | `rgba(250,204,21,.15)` | `#fde047` |
-
-### Value Color Classes
-| Class | Color | Use |
-|-------|-------|-----|
-| `.v-overload` | `#fbbf24` (yellow) | Capacity >100% |
-| `.v-ok` | `#34d399` (green) | Capacity ≤100% |
-| `.v-good` | `#34d399` (green) | Efficiency ≥100% |
-| `.v-med` | `#fbbf24` (yellow) | Breach 30-60% |
-| `.v-poor` | `#f87171` (red) | Efficiency <50% or Breach >60% |
-
-### Alert Classes
-| Class | Border Color | Use |
-|-------|-------------|-----|
-| `.alert-success` | `#22c55e` | Data quality pass |
-| `.alert-info` | `#3b82f6` | Capacity formula / info |
-| `.alert-warning` | `#ea580c` | Capacity alerts, risk warnings |
+| Chart box gradient | `#1a1740` → `#0e0e1a` |
+| Table background | `#141428` |
+| Footer gradient | `#1e1b4b` → `#0a0a14` |
+| Chart label color | `#a78bfa` |
+| Default chart text | `#94a3b8` |
 
 ### Typography
 - Primary font: `'Aptos','Segoe UI',system-ui,-apple-system,sans-serif`
-- Monospace (meta, formula): `'Consolas','Courier New',monospace`
-- Max width: `1320px`
+- Monospace (tags, formula): `Consolas,'Courier New',monospace`
+- Header tags: `Consolas,monospace` at 0.78rem
 
 ---
 
 ## 8. CHART CONFIGURATIONS
 
-### Chart 1: Capacity by Agent (Horizontal Bar)
-```javascript
-type: 'bar'
-indexAxis: 'y'
-// Sorted by capacity descending
-// Yellow (#fbbf24) for >100%, Green (#34d399) for ≤100%
-// X-axis: ticks with '%' suffix, title "Capacity %"
-// No legend
-borderRadius: 6
-```
-
-### Chart 2: Case Aging Distribution (Vertical Bar)
-```javascript
-type: 'bar'
-labels: ['0-10d','11-20d','21-30d','31-60d','61-90d','91+d']
-// Color gradient: green → yellow → orange → red
-// rgba(52,211,153,0.8), rgba(52,211,153,0.7), rgba(251,191,36,0.7),
-// rgba(251,146,60,0.7), rgba(239,68,68,0.7), rgba(220,38,38,0.8)
-borderRadius: 6
-```
-
-### Chart 3: Customer Concentration (Doughnut)
-```javascript
-type: 'doughnut'
-// Top 5 customers + "Others" bucket
-cutout: '55%'
-legend: position 'right'
-// Colors: #dc2626, #ea580c, #f59e0b, #8b5cf6, #3b82f6, #475569
-// Label format: "CustomerName (count)"
-// Tooltip shows percentage of total active cases
-borderColor: '#0f0f1a'
-```
-
-### Chart 4: Priority Distribution (Pie)
-```javascript
-type: 'pie'
-// Labels: "Normal (N)", "Low (N)", "High (N)"
-// Colors: #8b5cf6 (Normal), #3b82f6 (Low), #dc2626 (High)
-legend: position 'bottom'
-borderColor: '#0f0f1a'
-```
-
-### Chart 5: Status Reason Distribution (Horizontal Bar)
-```javascript
-type: 'bar'
-indexAxis: 'y'
-// All active status reasons, sorted by count descending
-// Abbreviated labels: "Req Gathering", "In Process MS", "Req Gather/Brief"
-// Mixed colors for visual distinction
-borderRadius: 4
-```
+> **Source of truth:** `best_report_format/Reference_Design.html` `<script>` block (lines 574–773).
+> Copy chart initialization code structure from Reference_Design.html. Replace only data arrays.
 
 ### Global Chart Defaults
 ```javascript
 Chart.defaults.color = '#94a3b8';
 Chart.defaults.font.family = "'Aptos','Segoe UI',system-ui,sans-serif";
 Chart.defaults.font.size = 12;
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
+```
+
+### Gauge Helper Function
+```javascript
+function makeGauge(id, val, max, ok, warn) {
+  const pct = Math.min(val/max, 1);
+  const col = val > warn ? 'rgba(239,68,68,.75)' : val > ok ? 'rgba(251,146,60,.75)' : 'rgba(52,211,153,.75)';
+  new Chart(document.getElementById(id), {
+    type: 'doughnut',
+    data: { datasets: [{ data: [pct*100, (1-pct)*100], backgroundColor: [col, 'rgba(255,255,255,.06)'], borderWidth: 0, circumference: 180, rotation: 270 }] },
+    options: { responsive: false, cutout: '75%', plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+  });
+}
+```
+
+### Chart Inventory
+
+| # | Chart ID | Type | Location | Key Config |
+|---|----------|------|----------|------------|
+| 1 | #deptGauge | Half-doughnut (gauge) | Dept Hero | `makeGauge('deptGauge', avgCapacity, 400, 100, 200)` |
+| 2 | #normGauge | Half-doughnut (gauge) | Dept Hero | `makeGauge('normGauge', normalCap, 300, 100, 150)` |
+| 3 | #highGauge | Half-doughnut (gauge) | Dept Hero | `makeGauge('highGauge', highCap, 200, 80, 100)` |
+| 4 | #slaGauge | Half-doughnut (gauge) | Section 4 | `makeGauge('slaGauge', compliance%, 100, 60, 40)` |
+| 5 | #capChart | Stacked horizontal bar | Section 3 | 3 datasets: Normal/High/Low capacity %, `indexAxis:'y'`, stacked |
+| 6 | #ageChart | Vertical bar | Section 4 | 7 buckets, color gradient green→red |
+| 7 | #custPie | Doughnut | Section 4 | Top 5 + Others, cutout 55%, legend right |
+| 8 | #effChart | Horizontal bar | Section 4 | Per-agent efficiency, sorted desc, color-coded by threshold |
+| 9 | #statChart | Horizontal bar | Section 5 | All status reasons, sorted by count desc |
+| 10 | #typeChart | Doughnut | Section 5 | All case types, cutout 50%, legend right |
+| 11 | #grpTP | Grouped vertical bar | Section 5 | Last 6 months, one dataset per agent, legend bottom |
+
+### Chart 5: Capacity Stacked Bar (#capChart)
+```javascript
+type: 'bar', indexAxis: 'y'
+datasets: [
+  { label: 'Normal Cap %', backgroundColor: 'rgba(251,146,60,.7)', borderRadius: 4 },
+  { label: 'High Cap %',   backgroundColor: 'rgba(239,68,68,.7)',  borderRadius: 4 },
+  { label: 'Low Cap %',    backgroundColor: 'rgba(251,191,36,.7)', borderRadius: 4 }
+]
+scales: { x: { stacked: true }, y: { stacked: true } }
+legend: { position: 'top' }
+```
+
+### Chart 6: Case Aging (#ageChart)
+```javascript
+type: 'bar'
+labels: ['0-5d','6-10d','11-16d','17-30d','31-60d','61-90d','91+d']
+// 7 buckets with color gradient: green → yellow → orange → red → dark red
+backgroundColor: [
+  'rgba(52,211,153,.7)', 'rgba(52,211,153,.7)',
+  'rgba(251,191,36,.7)', 'rgba(251,146,60,.7)',
+  'rgba(239,68,68,.6)', 'rgba(220,38,38,.7)', 'rgba(153,27,27,.8)'
+]
+borderRadius: 6
+```
+
+### Chart 7: Customer Doughnut (#custPie)
+```javascript
+type: 'doughnut'
+// Top 5 customers + "Others" bucket
+cutout: '55%', legend: { position: 'right' }
+backgroundColor: ['#dc2626','#ea580c','#f59e0b','#8b5cf6','#3b82f6','#475569']
+borderColor: '#0a0a14'
+// Tooltip: show percentage of total
+```
+
+### Chart 8: Efficiency Bar (#effChart)
+```javascript
+type: 'bar', indexAxis: 'y'
+// Sorted by efficiency descending
+// Green for ≥100%, Yellow for 50-100%, Red for <50%, Gray for 0%
+borderRadius: 6
+```
+
+### Chart 9: Status Distribution (#statChart)
+```javascript
+type: 'bar', indexAxis: 'y'
+// All status reasons, sorted by count descending
+// Mixed colors for visual distinction
+borderRadius: 4
+```
+
+### Chart 10: Case Type Doughnut (#typeChart)
+```javascript
+type: 'doughnut'
+cutout: '50%', legend: { position: 'right' }
+backgroundColor: ['#7c3aed','#ec4899','#f59e0b','#10b981','#3b82f6','#6366f1','#f43f5e','#14b8a6']
+borderColor: '#0a0a14'
+```
+
+### Chart 11: Monthly Throughput (#grpTP)
+```javascript
+type: 'bar' // vertical grouped
+// One dataset per agent, last 6 months
+// Calculate from resolved cases: group by month(Deactivated On) and Owner
+backgroundColor per agent:
+  Georges Mouaikel:    'rgba(139,92,246,.75)'
+  Rebecca Estephan:    'rgba(239,68,68,.7)'
+  Fadi Hanna:          'rgba(251,146,60,.7)'
+  Jana Sweid:          'rgba(56,189,248,.7)'
+  Mennatullah El Bahr: 'rgba(52,211,153,.7)'
+  Abdo Khoury:         'rgba(251,191,36,.7)'
+legend: { position: 'bottom' }
 ```
 
 ---
@@ -401,6 +521,9 @@ Chart.defaults.font.size = 12;
 - Waiting on Customer
 - Waiting on Third Party
 - On Hold
+- Pending CR
+- Pending Functional
+- Pending Internal Approval
 - Any status not in the approved list above
 
 ### Rationale
@@ -410,50 +533,55 @@ Capacity calculations must reflect only cases actively being worked. Cases in pe
 - Show total before filter, total after filter, and exclusion count
 - Display exclusion rate as percentage
 - List active status reasons with per-status case counts
-- Include status filter disclosure in header meta line AND dedicated filter box
+- Report exclusion in header tags and data quality alert
 
 ---
 
 ## 10. COMMON MISTAKES TO AVOID
 
-1. **DO NOT change the section order** — Header → Filter Box → Exec Summary → Data Quality → Agent Table → Analytics Charts → Customer Table → Footer
-2. **DO NOT omit the status filter disclosure box** — it must appear between header and executive summary
-3. **DO NOT use a different color scheme or font** — match the design system exactly
-4. **DO NOT calculate capacity BEFORE applying status filter** — filter first, then calculate
-5. **DO NOT forget exclusion counts** in header meta line (format: `ACTIVE: N CASES • EXCLUDED: N PENDING/WAITING`)
-6. **DO NOT use "Top 10" for customer doughnut chart** — use "Top 5 + Others" (top 10 is for the TABLE only)
-7. **DO NOT change chart types** — capacity is horizontal bar, aging is vertical bar, customer is doughnut, priority is pie, status is horizontal bar
-8. **DO NOT show "Raji Aoun"** — always rename to "Unassigned Cases"
-9. **DO NOT forget planning fence** = report date + 30 days
-10. **DO NOT omit the formula box** in the footer
-11. **DO NOT make the capacity chart vertical** — it must be horizontal (indexAxis: 'y')
-12. **DO NOT forget to sort agents by capacity descending** in both table and chart
-13. **DO NOT use different badge logic** — >100% = OVERLOAD, ≤100% = OK
-14. **DO NOT skip the "Generated by Senior Operations Manager & D365 F&O Solution Architect"** attribution in footer
+1. **DO NOT deviate from Reference_Design.html structure** — always copy CSS classes, section order, and component layout from `best_report_format/Reference_Design.html`
+2. **DO NOT use long CSS class names** — the reference uses abbreviated names (`.w`, `.hdr`, `.cd`, `.sec`, `.sh`, `.sn`, `.st`, `.cg`, `.cb`, `.tw`, `.b`, `.al`, `.ft`, `.fm`, etc.)
+3. **DO NOT omit the Department Capacity Gauge Hero section** — it must appear between Executive Summary and Agent Dashboard
+4. **DO NOT use a simple bar for capacity** — Section 3 uses a **stacked** horizontal bar (Normal + High + Low)
+5. **DO NOT omit the mini bar visuals** in the Agent Performance table — each row needs a `.mb` capacity bar
+6. **DO NOT use only 2 badge levels** — use EXTREME (`.b-ex`), CRITICAL (`.b-cr`), OK (`.b-lo`), and N/A (`.b-md`)
+7. **DO NOT use 6 aging buckets** — use 7 buckets: 0-5d, 6-10d, 11-16d, 17-30d, 31-60d, 61-90d, 91+d
+8. **DO NOT omit the Efficiency chart** — Section 4 includes a horizontal bar chart for efficiency by agent
+9. **DO NOT omit the SLA Compliance gauge** — Section 4 includes a half-doughnut gauge for SLA compliance
+10. **DO NOT omit Section 5: Workload Composition** — includes Status Distribution, Case Type Breakdown, and Monthly Throughput
+11. **DO NOT calculate capacity BEFORE applying status filter** — filter first, then calculate
+12. **DO NOT show "Raji Aoun"** — always rename to "Unassigned Cases"
+13. **DO NOT forget planning fence** = report date + 30 days
+14. **DO NOT omit the formula box** (`.fm`) in the footer
 15. **DO NOT include pending/waiting cases in ANY KPI calculation** — all metrics use filtered dataset only
+16. **DO NOT use `#0f0f1a` as body background** — the reference uses `#0a0a14`
+17. **DO NOT use `1320px` max-width** — the reference uses `1360px`
+18. **DO NOT skip the "Generated by Senior Operations Manager & D365 F&O Solution Architect"** attribution in footer
 
 ---
 
 ## 11. VERIFICATION CHECKLIST
 
-Before finalizing any report, verify:
+Before finalizing any report, verify against `best_report_format/Reference_Design.html`:
 
 - [ ] File named correctly: `SupportDepartmentPerformance{YYYYMMDD}-{N}.html`
+- [ ] CSS classes match Reference_Design.html (abbreviated names: `.w`, `.hdr`, `.cd`, `.sec`, etc.)
 - [ ] Status filter applied BEFORE all calculations
 - [ ] Only 8 approved status reasons included
-- [ ] Exclusion count shown in header meta and filter box
-- [ ] All 6 executive summary cards present with correct data
-- [ ] Data quality alert shows coverage %
-- [ ] Capacity chart is horizontal bar, sorted descending
-- [ ] Agent table has 8 columns, sorted by capacity descending
-- [ ] All 4 analytics charts render (aging, customer, priority, status)
-- [ ] Customer doughnut shows Top 5 + Others
-- [ ] Customer table shows Top 10 with risk badges
-- [ ] Footer includes formula box with all formulas
-- [ ] Footer includes status filtering disclosure
+- [ ] Header (`.hdr`) has 5 tag pills matching reference format
+- [ ] Data quality alert (`.al.al-s`) present
+- [ ] All 6 executive summary cards present with correct card classes
+- [ ] Department Capacity Gauge Hero (`.dept-hero`) with 3 gauges
+- [ ] Agent table has 9 columns including mini bar visual column
+- [ ] Agent table uses 4-level badge system (EXTREME/CRITICAL/OK/N/A)
+- [ ] Section 3: Stacked horizontal bar capacity chart
+- [ ] Section 4: 4 charts (aging, customer doughnut, efficiency bar, SLA gauge)
+- [ ] Section 5: 3 charts (status bar, case type doughnut, monthly throughput)
+- [ ] Customer table has 7 columns with risk badges and row highlighting
+- [ ] Footer (`.ft`) includes formula box (`.fm`) with all formulas
 - [ ] Planning fence = report date + 30 days
 - [ ] Chart.js CDN loaded (v4.4.1)
-- [ ] Design matches reference: dark theme, purple accents, correct fonts
+- [ ] Body background is `#0a0a14`, max-width is `1360px`
 
 ---
 
@@ -467,7 +595,7 @@ Before finalizing any report, verify:
 **Key Changes in v2.3.0:**
 1. Added mandatory Status Reason filtering (8 active statuses only)
 2. Updated capacity calculation to use filtered dataset
-3. Added status filter summary reporting (disclosure box)
+3. Added status filter summary reporting
 4. Updated governance compliance statement
 5. Enhanced exclusion tracking and reporting
-6. Adopted reference design template (dark theme, Chart.js, responsive layout)
+6. Adopted Reference_Design.html template (dark theme, gauges, stacked charts, mini bars)
