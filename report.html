@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Support Department Performance Report — 13 February 2026</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card-alt: #263348;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #3b82f6;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --orange: #f97316;
+    --red: #ef4444;
+    --purple: #a855f7;
+    --cyan: #06b6d4;
+    --pink: #ec4899;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+  /* Header */
+  .header { background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%); border: 1px solid var(--border); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+  .header .subtitle { color: var(--muted); font-size: 15px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .tag { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .tag.blue { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+  .tag.green { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+  .tag.yellow { background: rgba(234,179,8,0.15); color: #facc15; border: 1px solid rgba(234,179,8,0.3); }
+  .tag.red { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+  .tag.purple { background: rgba(168,85,247,0.15); color: #c084fc; border: 1px solid rgba(168,85,247,0.3); }
+  .tag.orange { background: rgba(249,115,22,0.15); color: #fb923c; border: 1px solid rgba(249,115,22,0.3); }
+
+  /* Cards */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .kpi-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .kpi-card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .kpi-card .value { font-size: 32px; font-weight: 700; }
+  .kpi-card .sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .kpi-card.alert .value { color: var(--red); }
+  .kpi-card.warn .value { color: var(--orange); }
+  .kpi-card.ok .value { color: var(--green); }
+  .kpi-card.info .value { color: var(--accent); }
+
+  /* Sections */
+  .section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+  .section h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .section h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--muted); }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 12px; background: var(--card-alt); color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; border-bottom: 2px solid var(--border); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  tr:hover td { background: rgba(59,130,246,0.05); }
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+
+  /* Capacity bar */
+  .cap-bar-wrap { width: 100%; height: 8px; background: var(--card-alt); border-radius: 4px; overflow: hidden; }
+  .cap-bar { height: 100%; border-radius: 4px; transition: width 0.3s; }
+  .cap-green { background: var(--green); }
+  .cap-yellow { background: var(--yellow); }
+  .cap-orange { background: var(--orange); }
+  .cap-red { background: var(--red); }
+
+  /* Chart bars */
+  .bar-chart { display: flex; flex-direction: column; gap: 8px; }
+  .bar-row { display: flex; align-items: center; gap: 12px; }
+  .bar-label { width: 120px; font-size: 12px; color: var(--muted); text-align: right; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 24px; background: var(--card-alt); border-radius: 4px; overflow: hidden; position: relative; }
+  .bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 8px; font-size: 11px; font-weight: 600; color: white; min-width: 28px; }
+  .bar-value { font-size: 12px; font-weight: 600; width: 40px; text-align: right; flex-shrink: 0; }
+
+  /* Status badge */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .badge.critical { background: rgba(239,68,68,0.2); color: #f87171; }
+  .badge.warning { background: rgba(249,115,22,0.2); color: #fb923c; }
+  .badge.caution { background: rgba(234,179,8,0.2); color: #facc15; }
+  .badge.healthy { background: rgba(34,197,94,0.2); color: #4ade80; }
+
+  /* Two column */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
+  @media (max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  /* Executive summary */
+  .exec-summary { background: linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(168,85,247,0.08) 100%); border: 1px solid rgba(59,130,246,0.2); border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+  .exec-summary h2 { border-bottom-color: rgba(59,130,246,0.2); }
+  .exec-summary p { font-size: 14px; line-height: 1.8; }
+
+  /* Filter summary */
+  .filter-box { background: rgba(234,179,8,0.06); border: 1px solid rgba(234,179,8,0.2); border-radius: 8px; padding: 16px; margin: 12px 0; }
+  .filter-box .title { font-size: 13px; font-weight: 600; color: var(--yellow); margin-bottom: 8px; }
+  .filter-box .detail { font-size: 12px; color: var(--muted); }
+
+  /* Footer */
+  .footer { text-align: center; padding: 32px 0 16px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); margin-top: 24px; }
+  .footer .governance { font-size: 11px; max-width: 800px; margin: 12px auto; opacity: 0.7; }
+
+  /* Donut-like ring for department capacity */
+  .cap-ring { width: 140px; height: 140px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; }
+  .cap-ring .inner { width: 100px; height: 100px; border-radius: 50%; background: var(--card); display: flex; align-items: center; justify-content: center; flex-direction: column; }
+  .cap-ring .pct { font-size: 28px; font-weight: 700; }
+  .cap-ring .lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; }
+
+  .scroll-table { overflow-x: auto; }
+
+  /* Print */
+  @media print {
+    body { background: white; color: #1e293b; }
+    .header { background: #f1f5f9; }
+    .section, .kpi-card { background: white; border-color: #e2e8f0; }
+    .exec-summary { background: #f8fafc; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ═══════════════════════════════════════════════════ HEADER ═══════════════════════════════════════════════════ -->
+<div class="header">
+  <h1>Support Department Performance Report</h1>
+  <div class="subtitle">PRMT01-E v2.3.0 &mdash; Report Date: 13 February 2026 &nbsp;|&nbsp; Planning Fence: 15 March 2026 (30 days)</div>
+  <div class="tags">
+    <span class="tag blue">ACTIVE: 95 CASES</span>
+    <span class="tag orange">EXCLUDED: 84 PENDING/WAITING</span>
+    <span class="tag yellow">CAPACITY: 102.3%</span>
+    <span class="tag red">OVERDUE: 42</span>
+    <span class="tag green">RESOLVED (30D): 165</span>
+    <span class="tag purple">6 AGENTS</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ EXECUTIVE SUMMARY ═══════════════════════════════════════════ -->
+<div class="exec-summary">
+  <h2>Executive Summary</h2>
+  <p>
+    As of <strong>13 February 2026</strong>, the Support Department holds <strong>95 active open cases</strong>
+    (filtered for active work status) with <strong>84 cases (88.4%)</strong> due within the 30-day planning fence.
+    <strong>84 cases excluded</strong> from analysis due to pending/waiting status (not actively being worked).
+    Department capacity stands at <strong>102.3%</strong> (1,080.0 estimated hours against 1,056 available hours across 6 agents),
+    indicating the team is <strong>slightly over capacity</strong>. There are <strong>42 overdue cases</strong> requiring prioritized attention.
+    In the last 30 days, the team resolved <strong>165 cases</strong>, demonstrating strong throughput.
+    Average case age is <strong>48 days</strong> with a median of <strong>25 days</strong>.
+    Data quality is excellent with <strong>97.9%</strong> of cases having both due dates and estimation data.
+  </p>
+</div>
+
+<!-- ═══════════════════════════════════════════════ KPI CARDS ═══════════════════════════════════════════════════ -->
+<div class="kpi-grid">
+  <div class="kpi-card info">
+    <div class="label">Active Open Cases</div>
+    <div class="value">95</div>
+    <div class="sub">179 total &minus; 84 excluded</div>
+  </div>
+  <div class="kpi-card warn">
+    <div class="label">Dept. Capacity</div>
+    <div class="value">102.3%</div>
+    <div class="sub">1,080h / 1,056h available</div>
+  </div>
+  <div class="kpi-card alert">
+    <div class="label">Overdue Cases</div>
+    <div class="value">42</div>
+    <div class="sub">44.2% of active cases</div>
+  </div>
+  <div class="kpi-card ok">
+    <div class="label">Resolved (30d)</div>
+    <div class="value">165</div>
+    <div class="sub">~5.5 cases/day avg</div>
+  </div>
+  <div class="kpi-card info">
+    <div class="label">Within Fence</div>
+    <div class="value">84</div>
+    <div class="sub">88.4% of active cases</div>
+  </div>
+  <div class="kpi-card warn">
+    <div class="label">Avg Case Age</div>
+    <div class="value">48d</div>
+    <div class="sub">Median: 25d &middot; Max: 326d</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ STATUS REASON FILTERING ═══════════════════════════════════════ -->
+<div class="section">
+  <h2>Status Reason Filtering (v2.3.0)</h2>
+  <div class="grid-2">
+    <div>
+      <h3>Active Status Reasons (Included)</h3>
+      <table>
+        <thead><tr><th>Status Reason</th><th class="text-right">Cases</th></tr></thead>
+        <tbody>
+          <tr><td>In Progress</td><td class="text-right">41</td></tr>
+          <tr><td>Not Started</td><td class="text-right">35</td></tr>
+          <tr><td>Estimation</td><td class="text-right">8</td></tr>
+          <tr><td>Researching</td><td class="text-right">4</td></tr>
+          <tr><td>Requirement Gathering</td><td class="text-right">4</td></tr>
+          <tr><td>In Process with Microsoft</td><td class="text-right">2</td></tr>
+          <tr><td>Req. Gathering/Pending Briefing</td><td class="text-right">1</td></tr>
+          <tr><td>Solution Design</td><td class="text-right">0</td></tr>
+          <tr><td style="font-weight:700;">Total Active</td><td class="text-right" style="font-weight:700;">95</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <h3>Excluded Status Reasons (Pending/Waiting)</h3>
+      <table>
+        <thead><tr><th>Status Reason</th><th class="text-right">Cases</th></tr></thead>
+        <tbody>
+          <tr><td>Pending Client Confirmation</td><td class="text-right">38</td></tr>
+          <tr><td>Pending Dev</td><td class="text-right">25</td></tr>
+          <tr><td>Pending Customer</td><td class="text-right">15</td></tr>
+          <tr><td>Pending CR</td><td class="text-right">3</td></tr>
+          <tr><td>Pending Functional</td><td class="text-right">1</td></tr>
+          <tr><td>Pending Internal Approval</td><td class="text-right">1</td></tr>
+          <tr><td>Pending Dev - Require Delivery Date</td><td class="text-right">1</td></tr>
+          <tr><td style="font-weight:700;">Total Excluded</td><td class="text-right" style="font-weight:700;">84</td></tr>
+        </tbody>
+      </table>
+      <div class="filter-box">
+        <div class="title">Filtering Rationale</div>
+        <div class="detail">Capacity calculations reflect only cases actively being worked or ready to start. Cases in pending/waiting states are excluded as they do not consume agent capacity until reactivated. Exclusion rate: 46.9%.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ AGENT CAPACITY TABLE ═══════════════════════════════════════════ -->
+<div class="section">
+  <h2>Agent Capacity &amp; Workload (30-Day Fence)</h2>
+  <div class="scroll-table">
+  <table>
+    <thead>
+      <tr>
+        <th>Agent</th>
+        <th class="text-right">Open</th>
+        <th class="text-right">In Fence</th>
+        <th class="text-right">Est. Hours</th>
+        <th class="text-right">Capacity</th>
+        <th style="width:180px;">Load</th>
+        <th class="text-right">Overdue</th>
+        <th class="text-right">Avg Age</th>
+        <th class="text-right">Resolved (30d)</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="agent-table">
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ AGING ANALYSIS ═════════════════════════════════════════════ -->
+<div class="section">
+  <h2>Case Aging Distribution</h2>
+  <div class="grid-2">
+    <div>
+      <div class="bar-chart" id="age-chart"></div>
+    </div>
+    <div>
+      <h3>Aging Summary</h3>
+      <table>
+        <tr><td>Average Age</td><td class="text-right" style="font-weight:700;">48 days</td></tr>
+        <tr><td>Median Age</td><td class="text-right" style="font-weight:700;">25 days</td></tr>
+        <tr><td>Max Age</td><td class="text-right" style="font-weight:700;">326 days</td></tr>
+        <tr><td>Cases &gt; 90 days</td><td class="text-right" style="font-weight:700; color: var(--red);">18 (18.9%)</td></tr>
+        <tr><td>Cases &leq; 30 days</td><td class="text-right" style="font-weight:700; color: var(--green);">52 (54.7%)</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ DISTRIBUTION CHARTS ═══════════════════════════════════════════ -->
+<div class="grid-2">
+  <div class="section">
+    <h2>Cases by Origin</h2>
+    <div class="bar-chart" id="origin-chart"></div>
+  </div>
+  <div class="section">
+    <h2>Cases by Case Type (Top 10)</h2>
+    <div class="bar-chart" id="casetype-chart"></div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="section">
+    <h2>Cases by Priority</h2>
+    <div class="bar-chart" id="priority-chart"></div>
+  </div>
+  <div class="section">
+    <h2>Top 10 Customers by Open Cases</h2>
+    <div class="bar-chart" id="customer-chart"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ DATA QUALITY ═══════════════════════════════════════════════════ -->
+<div class="section">
+  <h2>Data Quality Audit (Active Cases Only)</h2>
+  <div class="grid-3">
+    <div>
+      <div class="kpi-card ok" style="border:none; padding:0;">
+        <div class="label">Data Completeness</div>
+        <div class="value">97.9%</div>
+        <div class="sub">93 of 95 cases have due date &amp; estimation</div>
+      </div>
+    </div>
+    <div>
+      <div class="kpi-card ok" style="border:none; padding:0;">
+        <div class="label">Missing Due Date</div>
+        <div class="value" style="color:var(--green)">0</div>
+        <div class="sub">All cases have due dates</div>
+      </div>
+    </div>
+    <div>
+      <div class="kpi-card warn" style="border:none; padding:0;">
+        <div class="label">Missing Estimation</div>
+        <div class="value" style="color:var(--orange)">2</div>
+        <div class="sub">2.1% of active cases</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ GOVERNANCE ═══════════════════════════════════════════════════ -->
+<div class="section">
+  <h2>Governance &amp; Compliance</h2>
+  <table>
+    <tr><td>Report Version</td><td>PRMT01-E v2.3.0</td></tr>
+    <tr><td>Status Reason Filtering</td><td><span class="badge healthy">APPLIED</span> &mdash; 8 active status reasons only</td></tr>
+    <tr><td>Department Agent Filter</td><td><span class="badge healthy">APPLIED</span> &mdash; 7 agents (incl. Raji Aoun &rarr; Unassigned)</td></tr>
+    <tr><td>Excluded Cases</td><td>84 cases (46.9%) in pending/waiting states</td></tr>
+    <tr><td>Capacity Basis</td><td>8 hrs/day &times; 22 working days = 176 hrs per agent</td></tr>
+    <tr><td>Planning Fence</td><td>30 days (13 Feb &ndash; 15 Mar 2026)</td></tr>
+    <tr><td>Data Source</td><td>Support Unit Open Cases (13 Feb 2026) &amp; Resolved Cases (13 Feb 2026)</td></tr>
+  </table>
+  <div class="filter-box" style="margin-top:16px;">
+    <div class="title">Report Limitations</div>
+    <div class="detail">
+      &bull; Status Filter: Only cases with active work status included<br>
+      &bull; Excluded cases: 84 cases in Pending/Waiting states<br>
+      &bull; Assumption: Pending cases do not consume capacity until reactivated<br>
+      &bull; Impact: Capacity % reflects active workload only<br>
+      &bull; 2 cases missing Initial Estimation Duration (excluded from capacity calc)
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ FOOTER ═══════════════════════════════════════════════════ -->
+<div class="footer">
+  <div><strong>Support Department Performance Report</strong> &mdash; 13 February 2026 &mdash; PRMT01-E v2.3.0</div>
+  <div class="governance">
+    STATUS FILTERING: Only active work states included (8 approved statuses) &middot;
+    EXCLUDED: Pending/Waiting states that do not consume active capacity &middot;
+    Generated automatically from CRM data export
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════
+const agents = [
+  { name: "Jana Sweid", open: 14, fence: 13, hours: 267.0, capacity: 151.7, overdue: 10, avgAge: 43.2, maxAge: 95, resolved30d: 19 },
+  { name: "Fadi Hanna", open: 24, fence: 23, hours: 246.0, capacity: 139.8, overdue: 1, avgAge: 30.5, maxAge: 178, resolved30d: 36 },
+  { name: "Rebecca Estephan", open: 12, fence: 10, hours: 210.0, capacity: 119.3, overdue: 5, avgAge: 31.2, maxAge: 91, resolved30d: 31 },
+  { name: "Georges Mouaikel", open: 27, fence: 27, hours: 185.0, capacity: 105.1, overdue: 19, avgAge: 76.1, maxAge: 326, resolved30d: 49 },
+  { name: "Mennatullah El Bahr", open: 8, fence: 5, hours: 83.0, capacity: 47.2, overdue: 4, avgAge: 56.9, maxAge: 102, resolved30d: 26 },
+  { name: "Abdo Khoury", open: 8, fence: 5, hours: 81.0, capacity: 46.0, overdue: 3, avgAge: 36.9, maxAge: 49, resolved30d: 4 },
+  { name: "Unassigned Cases", open: 2, fence: 1, hours: 8.0, capacity: 0, overdue: 0, avgAge: 2.0, maxAge: 3, resolved30d: 0 }
+];
+
+const ageBuckets = [
+  { label: "0-7 days", count: 22, color: "var(--green)" },
+  { label: "8-14 days", count: 13, color: "var(--green)" },
+  { label: "15-30 days", count: 17, color: "var(--yellow)" },
+  { label: "31-60 days", count: 20, color: "var(--orange)" },
+  { label: "61-90 days", count: 5, color: "var(--orange)" },
+  { label: "91-180 days", count: 17, color: "var(--red)" },
+  { label: "180+ days", count: 1, color: "var(--red)" }
+];
+
+const origins = [
+  { label: "Support", count: 59, color: "var(--accent)" },
+  { label: "Change Request", count: 16, color: "var(--purple)" },
+  { label: "Pre-Sales", count: 7, color: "var(--cyan)" },
+  { label: "Internal Support", count: 7, color: "var(--green)" },
+  { label: "Project", count: 6, color: "var(--orange)" }
+];
+
+const caseTypes = [
+  { label: "Development", count: 40, color: "var(--accent)" },
+  { label: "Functional Issue", count: 12, color: "var(--purple)" },
+  { label: "New Request", count: 10, color: "var(--cyan)" },
+  { label: "R&D", count: 6, color: "var(--green)" },
+  { label: "Training", count: 4, color: "var(--yellow)" },
+  { label: "Technical Issue", count: 3, color: "var(--orange)" },
+  { label: "Reconciliation", count: 3, color: "var(--pink)" },
+  { label: "Budget", count: 3, color: "var(--red)" },
+  { label: "Fixed Assets", count: 2, color: "var(--muted)" },
+  { label: "Retail & POS", count: 2, color: "var(--green)" }
+];
+
+const priorities = [
+  { label: "Normal", count: 85, color: "var(--accent)" },
+  { label: "Low", count: 9, color: "var(--green)" },
+  { label: "High", count: 1, color: "var(--red)" }
+];
+
+const customers = [
+  { label: "Alfa", count: 22, color: "var(--accent)" },
+  { label: "Holdal", count: 15, color: "var(--purple)" },
+  { label: "Info-sys", count: 13, color: "var(--cyan)" },
+  { label: "Bromine", count: 8, color: "var(--green)" },
+  { label: "Hugo Boss", count: 6, color: "var(--yellow)" },
+  { label: "Kurban Group", count: 5, color: "var(--orange)" },
+  { label: "Engicon", count: 4, color: "var(--pink)" },
+  { label: "GnTech", count: 4, color: "var(--red)" },
+  { label: "Etisalat", count: 3, color: "var(--muted)" },
+  { label: "Toters", count: 3, color: "var(--green)" }
+];
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════
+
+function capColor(pct) {
+  if (pct >= 120) return "cap-red";
+  if (pct >= 100) return "cap-orange";
+  if (pct >= 80) return "cap-yellow";
+  return "cap-green";
+}
+
+function statusBadge(pct) {
+  if (pct >= 120) return '<span class="badge critical">CRITICAL</span>';
+  if (pct >= 100) return '<span class="badge warning">OVER</span>';
+  if (pct >= 80) return '<span class="badge caution">HIGH</span>';
+  return '<span class="badge healthy">OK</span>';
+}
+
+// Agent table
+const tbody = document.getElementById("agent-table");
+let deptOpen = 0, deptFence = 0, deptHours = 0, deptOverdue = 0, deptResolved = 0;
+agents.forEach(a => {
+  deptOpen += a.open; deptFence += a.fence; deptHours += a.hours; deptOverdue += a.overdue; deptResolved += a.resolved30d;
+  const barW = Math.min(a.capacity, 200);
+  const isUnassigned = a.name === "Unassigned Cases";
+  tbody.innerHTML += `<tr>
+    <td style="font-weight:600;">${a.name}</td>
+    <td class="text-right">${a.open}</td>
+    <td class="text-right">${a.fence}</td>
+    <td class="text-right">${a.hours.toFixed(0)}h</td>
+    <td class="text-right" style="font-weight:700;">${isUnassigned ? '—' : a.capacity.toFixed(1) + '%'}</td>
+    <td>${isUnassigned ? '—' : `<div class="cap-bar-wrap"><div class="cap-bar ${capColor(a.capacity)}" style="width:${barW/2}%"></div></div>`}</td>
+    <td class="text-right" style="color:${a.overdue > 0 ? 'var(--red)' : 'var(--green)'}">${a.overdue}</td>
+    <td class="text-right">${a.avgAge.toFixed(0)}d</td>
+    <td class="text-right">${a.resolved30d}</td>
+    <td>${isUnassigned ? '<span class="badge caution">UNASSIGNED</span>' : statusBadge(a.capacity)}</td>
+  </tr>`;
+});
+// Department total row
+tbody.innerHTML += `<tr style="background:var(--card-alt); font-weight:700;">
+  <td>DEPARTMENT TOTAL</td>
+  <td class="text-right">${deptOpen}</td>
+  <td class="text-right">${deptFence}</td>
+  <td class="text-right">${deptHours.toFixed(0)}h</td>
+  <td class="text-right" style="color:var(--orange)">102.3%</td>
+  <td><div class="cap-bar-wrap"><div class="cap-bar cap-orange" style="width:51%"></div></div></td>
+  <td class="text-right" style="color:var(--red)">${deptOverdue}</td>
+  <td class="text-right">48d</td>
+  <td class="text-right">${deptResolved}</td>
+  <td>${statusBadge(102.3)}</td>
+</tr>`;
+
+// Bar chart renderer
+function renderBarChart(containerId, data) {
+  const container = document.getElementById(containerId);
+  const maxVal = Math.max(...data.map(d => d.count));
+  data.forEach(d => {
+    const pct = (d.count / maxVal * 100).toFixed(0);
+    container.innerHTML += `
+      <div class="bar-row">
+        <div class="bar-label">${d.label}</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${pct}%; background:${d.color};">${d.count}</div>
+        </div>
+      </div>`;
+  });
+}
+
+renderBarChart("age-chart", ageBuckets);
+renderBarChart("origin-chart", origins);
+renderBarChart("casetype-chart", caseTypes);
+renderBarChart("priority-chart", priorities);
+renderBarChart("customer-chart", customers);
+</script>
+</body>
+</html>
