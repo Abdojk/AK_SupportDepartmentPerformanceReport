@@ -516,6 +516,7 @@ legend: { position: 'bottom' }
 ### EXCLUDE All Others, Including:
 - Pending Client Confirmation
 - Pending Dev
+- Pending Dev - Require Delivery Date
 - Pending Customer
 - Pending Delivery Date
 - Waiting on Customer
@@ -599,3 +600,76 @@ Before finalizing any report, verify against `best_report_format/Reference_Desig
 4. Updated governance compliance statement
 5. Enhanced exclusion tracking and reporting
 6. Adopted Reference_Design.html template (dark theme, gauges, stacked charts, mini bars)
+
+---
+
+## 13. QUICK REFERENCE — RUNTIME DETAILS
+
+These are practical details discovered during actual report generation that prevent common rework.
+
+### Resolved Cases File — Column Differences
+The resolved cases Excel has **different columns** than open cases:
+```
+Columns: (Do Not Modify) Case, (Do Not Modify) Row Checksum, (Do Not Modify) Modified On,
+         Case Number, Owner, Status, Customer, Case Title, Created On, Modified On,
+         Age, Initial Estimation Duration, Actual Duration, Actual Duration (days), Deactivated On
+```
+- **No** `Priority`, `Status Reason`, `Case Type`, `Due Date` columns
+- **Has** `Deactivated On` (datetime) — use this for monthly throughput grouping
+- **Has** `Case Number` (string) — not present in open cases
+- Apply same agent filter + Raji rename. Do NOT apply status filter (these are already resolved).
+
+### Efficiency Calculation — Scope
+- Uses **ALL** resolved cases for each agent (no date range filter)
+- `Efficiency = sum(Initial Estimation Duration) / sum(Actual Duration) × 100`
+- Many resolved cases have null `Initial Estimation Duration` (≈42% nulls) — these are excluded from numerator naturally via `.sum()` treating NaN as 0
+- If `Actual Duration` sum is 0 or agent has no resolved cases → show `0.0%`
+
+### Monthly Throughput — Calculation
+```python
+# Group resolved cases by Deactivated On month + Owner
+# Last 6 months relative to report date (including current partial month)
+# Current month label gets asterisk: "Feb 2026*"
+# Only include department agents (excluding Unassigned/Raji)
+```
+
+### Case Type Doughnut — "Other" Grouping
+- Show top 7 case types individually in the doughnut chart
+- Group all remaining types into a single **"Other (N)"** bucket
+- This prevents the legend from being too crowded
+
+### Mini Bar Width Calculation
+```
+Mini bar fill width % = min(agent_capacity / peak_capacity × 100, 100)
+```
+- Peak capacity = highest agent's overall capacity %
+- Green gradient (`#34d399` → `#6ee7b7`) for OK agents (≤100%)
+- Orange gradient (`#ea580c` → `#fbbf24`) for CRITICAL agents (>100%)
+- Red gradient (`#dc2626` → `#f97316`) for EXTREME agents (>300%)
+- Gray (`#64748b`) for Unassigned Cases
+
+### Efficiency Chart Color Thresholds
+```
+≥100%  → Green   rgba(52,211,153,.75)
+50-99% → Yellow  rgba(251,191,36,.7)
+<50%   → Red     rgba(239,68,68,.7)
+0%     → Gray    rgba(100,116,139,.5)
+```
+
+### Header Tag #2 Format (v2.3.0)
+The second tag pill must show BOTH active and excluded counts:
+```
+ACTIVE: {N} CASES • EXCLUDED: {N} PENDING/WAITING
+```
+
+### Footer Excluded Status Breakdown
+List each excluded status with its count in the formula box:
+```
+EXCLUDED: Pending Client Confirmation (N), Pending Dev (N), Pending Customer (N), ...
+```
+
+### Data Quality Coverage Fields
+Report coverage for three mandatory fields:
+- Due Date coverage %
+- Initial Estimation Duration coverage %
+- Case Type coverage %
