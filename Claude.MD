@@ -1,78 +1,73 @@
-# PRMT01-E v2.3.0 - STATUS REASON FILTER UPDATE
+# PRMT01-E v2.3.0 — Support Department Performance Report Specification
 
-## CRITICAL CHANGE: Mandatory Status Reason Filtering
+## COMPLETE REFERENCE FOR REPORT GENERATION
 
-### CHANGE SUMMARY
-Add mandatory filtering to ONLY include cases with specific active Status Reasons.
-This ensures capacity calculations reflect only cases actively being worked on or ready to start.
-
----
-
-## NEW FILTERING REQUIREMENT (STEP 1 - BEFORE ALL CALCULATIONS)
-
-### LOCATION IN PROMPT
-Add this filtering step IMMEDIATELY AFTER the department agent filtering and 
-BEFORE any data quality audit or KPI calculations.
-
-### FILTER SPECIFICATION
-
-**Column:** Status Reason (Column J in Excel)
-
-**ONLY Include Cases With These Status Reasons:**
-1. Estimation
-2. In Process with Microsoft
-3. In Progress
-4. Not Started
-5. Requirement Gathering
-6. Requirement Gathering/Pending Briefing
-7. Researching
-8. Solution Design
-
-**Exclude ALL Other Status Reasons**, including but not limited to:
-- Pending Client Confirmation
-- Pending Dev
-- Pending Customer
-- Pending Delivery Date
-- Waiting on Customer
-- Waiting on Third Party
-- On Hold
-- Any other status not in the approved list
+This document is the **single source of truth** for generating Support Department Performance Reports.
+Follow it exactly to avoid repeating past mistakes. When in doubt, refer to `best_report_format/reference_design.html`.
 
 ---
 
-## UPDATED CODE IMPLEMENTATION
+## 1. OVERVIEW & FILE NAMING
 
-### Step 1: Filter for Department Agents (EXISTING)
+- **Report Title:** `D365 F&O Support Report – {DD} {Mon} {YYYY} (v2.3.0)`
+- **File Name:** `SupportDepartmentPerformance{YYYYMMDD}-{N}.html` where N is the version number for that day
+- **Reference Design:** `best_report_format/reference_design.html` — the HTML template to match exactly
+- **Technology:** Single-file HTML5 with embedded CSS and Chart.js 4.4.1 via CDN
+- **CDN:** `https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js`
 
+---
+
+## 2. DATA SOURCES & INPUT
+
+### Excel Files (in `data/` folder)
+- **Open Cases:** `Support Unit Open Cases {M}-{DD}-{YYYY} {time}.xlsx`
+- **Resolved Cases:** `Support Unit Resolved Cases {M}-{DD}-{YYYY} {time}.xlsx`
+
+### Key Columns Used
+| Column | Purpose |
+|--------|---------|
+| Owner | Agent assignment (filter + grouping) |
+| Status Reason | Active vs pending filtering |
+| Due Date | Planning fence + SLA calculation |
+| Initial Estimation Duration | Capacity calculation (in hours) |
+| Case Type | Classification |
+| Priority | Normal / High / Low — determines SLA threshold |
+| Customer | Customer impact analysis |
+| Age | Case aging distribution |
+| Actual Duration | Efficiency calculation (resolved cases) |
+
+---
+
+## 3. DATA PROCESSING PIPELINE (STRICT ORDER)
+
+Execute these steps IN THIS EXACT ORDER. Do not skip or reorder.
+
+### Step 1: Read Excel File
 ```python
-# Read Excel file
 open_df = pd.read_excel(file_path)
+```
 
-# Filter for department agents FIRST
+### Step 2: Filter for Department Agents
+```python
 DEPARTMENT_AGENTS = [
     'Rebecca Estephan',
-    'Mennatullah El Bahr', 
+    'Mennatullah El Bahr',
     'Abdo Khoury',
     'Jana Sweid',
     'Fadi Hanna',
     'Georges Mouaikel',
     'Raji Aoun'
 ]
-
 open_df = open_df[open_df['Owner'].isin(DEPARTMENT_AGENTS)].copy()
+```
 
-# Rename Raji Aoun to Unassigned Cases
+### Step 3: Rename Raji Aoun
+```python
 open_df['Owner'] = open_df['Owner'].replace('Raji Aoun', 'Unassigned Cases')
 ```
 
-### Step 2: Filter for Active Status Reasons (NEW - MANDATORY)
-
+### Step 4: Filter for Active Status Reasons (v2.3.0 MANDATORY)
 ```python
-# ═══════════════════════════════════════════════════════════════
-# STEP 2: FILTER FOR ACTIVE STATUS REASONS ONLY
-# ═══════════════════════════════════════════════════════════════
-
-# Define approved active status reasons (cases actively being worked)
 ACTIVE_STATUS_REASONS = [
     'Estimation',
     'In Process with Microsoft',
@@ -84,281 +79,395 @@ ACTIVE_STATUS_REASONS = [
     'Solution Design'
 ]
 
-# Store total before filter for reporting
 total_before_status_filter = len(open_df)
-
-# Filter for active status reasons only
 open_df = open_df[open_df['Status Reason'].isin(ACTIVE_STATUS_REASONS)].copy()
-
 total_after_status_filter = len(open_df)
 excluded_by_status = total_before_status_filter - total_after_status_filter
-
-print(f"\n╔═══════════════════════════════════════════════════════════════╗")
-print(f"║ STATUS REASON FILTERING                                      ║")
-print(f"╚═══════════════════════════════════════════════════════════════╝\n")
-print(f"Total Cases Before Status Filter:  {total_before_status_filter}")
-print(f"Total Cases After Status Filter:   {total_after_status_filter}")
-print(f"Cases Excluded (Non-Active):       {excluded_by_status}")
-print(f"Exclusion Rate:                    {(excluded_by_status/total_before_status_filter*100):.1f}%")
-print(f"\nActive Status Reasons Included:")
-for status in ACTIVE_STATUS_REASONS:
-    count = len(open_df[open_df['Status Reason'] == status])
-    if count > 0:
-        print(f"  • {status:<40}: {count:>3} cases")
 ```
 
-### Step 3: Continue with Data Quality Audit (EXISTING)
+**EXCLUDE all other statuses** including: Pending Client Confirmation, Pending Dev, Pending Customer, Pending Delivery Date, Waiting on Customer, Waiting on Third Party, On Hold, and any others not in the approved list.
 
-```python
-# ═══════════════════════════════════════════════════════════════
-# STEP 3: DATA QUALITY AUDIT (on filtered dataset)
-# ═══════════════════════════════════════════════════════════════
+### Step 5: Data Quality Audit (on filtered dataset)
+- Check mandatory fields: Due Date, Initial Estimation Duration
+- Report coverage percentages
+- Note any missing data
 
-total_cases = len(open_df)  # Now reflects filtered count
-print(f"\n╔═══════════════════════════════════════════════════════════════╗")
-print(f"║ DATA QUALITY AUDIT (ACTIVE CASES ONLY)                       ║")
-print(f"╚═══════════════════════════════════════════════════════════════╝\n")
-print(f"Total Active Cases Analyzed: {total_cases}")
+### Step 6: Calculate KPIs (on filtered dataset)
+- See Section 5 for formulas
 
-# Continue with existing data quality checks...
+---
+
+## 4. DEPARTMENT AGENTS
+
+| Agent | Display Name | Notes |
+|-------|-------------|-------|
+| Rebecca Estephan | Rebecca Estephan | |
+| Mennatullah El Bahr | Mennatullah El Bahr | |
+| Abdo Khoury | Abdo Khoury | |
+| Jana Sweid | Jana Sweid | |
+| Fadi Hanna | Fadi Hanna | |
+| Georges Mouaikel | Georges Mouaikel | |
+| Raji Aoun | **Unassigned Cases** | ALWAYS rename — never show "Raji Aoun" |
+
+**Sort order in tables and charts:** By capacity % DESCENDING (highest first).
+
+---
+
+## 5. KPI FORMULAS
+
+### Capacity (30-Day Time-Fenced)
+```
+Planning Fence = Report Date + 30 days
+
+For each agent, sum estimated hours by priority for cases due within the fence:
+  Normal_Est_Hours = sum of Initial Estimation Duration for Normal priority cases
+  High_Est_Hours   = sum of Initial Estimation Duration for High priority cases
+  Low_Est_Hours    = sum of Initial Estimation Duration for Low priority cases
+
+Overall_Capacity_% = (Normal_Est_Hours / 128 × 100)
+                   + (High_Est_Hours / 16 × 100)
+                   + (Low_Est_Hours / 240 × 100)
+
+Baselines:
+  Normal = 128 hours (16 working days × 8 hours)
+  High   = 16 hours  (2 working days × 8 hours)
+  Low    = 240 hours (30 working days × 8 hours)
+```
+
+### Efficiency
+```
+Efficiency_% = (Total_Estimated_Duration / Total_Actual_Duration) × 100
+
+Uses RESOLVED cases data. Show "—" if agent has no resolved cases in period.
+```
+
+### SLA Breach
+```
+SLA Thresholds:
+  Normal Priority = 16 days
+  High Priority   = 2 days
+  Low Priority    = 30 days
+
+A case is in SLA breach if its Age exceeds the threshold for its priority.
+Breach_% = (breached_cases / total_cases) × 100
+```
+
+### Agent Status Badge
+```
+If Capacity > 100% → OVERLOAD (badge-overload, row-overload)
+If Capacity ≤ 100% → OK (badge-ok, row-ok)
+```
+
+### Customer Risk Level
+```
+CRITICAL: ≥20% of total cases OR avg age >50d with high case count
+HIGH:     ≥10% of total cases OR avg age >40d
+MEDIUM:   All others with ≥3 cases
 ```
 
 ---
 
-## UPDATED REPORT SECTIONS
+## 6. HTML REPORT STRUCTURE (EXACT SECTION ORDER)
 
-### Executive Summary Update
+**DO NOT change this order. It must match the reference design.**
 
-**OLD:**
-```
-As of 11 February 2026, the Support Department holds 180 total open cases 
-with 171 cases (95.0%) due within the 30-day planning fence...
-```
-
-**NEW:**
-```
-As of 11 February 2026, the Support Department holds [X] active open cases 
-(filtered for active work status) with [Y] cases ([Z]%) due within the 
-30-day planning fence. [N] cases excluded from analysis due to pending/waiting 
-status (not actively being worked). Data quality is excellent...
-```
-
-### Header Tags Update
-
-**Add to header tags:**
+### 6.1 Header
 ```html
-<span class="tag">ACTIVE: [X] CASES</span>
-<span class="tag">EXCLUDED: [N] PENDING/WAITING</span>
+<div class="header">
+  <h1>📊 Dynamics 365 Finance & Operations Support Report</h1>
+  <div class="sub">Support Department — Executive Performance Analysis</div>
+  <div class="meta">SNAPSHOT: {DD} {MON} {YYYY} • ACTIVE: {N} CASES • EXCLUDED: {N} PENDING/WAITING • VERSION: PRMT01-E v2.3.0</div>
+  <div class="tags">
+    <span class="tag">✅ DATA QUALITY: PASS</span>
+    <span class="tag">🎯 STATUS FILTERED</span>
+    <span class="tag">📆 30-DAY FENCE</span>
+  </div>
+</div>
 ```
 
-### Data Quality Section Update
+### 6.2 Status Filter Disclosure Box
+- Blue gradient background (`linear-gradient(135deg,#1e3a8a,#1e40af)`)
+- Title: "🎯 STATUS REASON FILTERING (v2.3.0)"
+- Explanation paragraph
+- 4 stat cards: Total In System, Active (Included), Excluded, Exclusion Rate
+- List of active status reasons with counts
 
-**Add Status Filter Summary:**
-```
-╔═══════════════════════════════════════════════════════════════╗
-║ STATUS REASON FILTERING                                      ║
-╚═══════════════════════════════════════════════════════════════╝
+### 6.3 Section 1: Executive Summary
+- 6 metric cards in a responsive grid:
+  1. **Active Cases** (card.dark) — total filtered count
+  2. **Avg Agent Capacity** (card.green) — average of all agents
+  3. **Agents >100% Capacity** (card.purple) — count fraction like "5/6"
+  4. **Peak Capacity** (card.orange) — highest agent name + %
+  5. **Avg Case Age** (card.blue) — average days
+  6. **Top Customer** (card.dark) — name + % of workload
 
-Total Cases in System:         [total before filter]
-Active Cases (included):       [total after filter]
-Excluded (Pending/Waiting):    [excluded count]
+### 6.4 Section 2: Data Quality & Capacity Overview
+- Green alert box: data quality summary (coverage %)
+- Full-width capacity chart (`chart-box full`) — horizontal bar
+- Blue info alert: capacity formula, planning fence date, status filtering note
 
-Active Status Reasons:
-  • Estimation:                [count]
-  • In Process with Microsoft: [count]
-  • In Progress:               [count]
-  • Not Started:               [count]
-  • Requirement Gathering:     [count]
-  • Req Gathering/Pend Brief:  [count]
-  • Researching:               [count]
-  • Solution Design:           [count]
+### 6.5 Section 3: Agent Performance Dashboard
+- 8-column table:
 
-Excluded Status Reasons:
-  • Pending Client Confirm:    [count]
-  • Pending Dev:               [count]
-  • Pending Customer:          [count]
-  • Other Pending/Waiting:     [count]
+| Column | Content |
+|--------|---------|
+| Agent | Name (bold) |
+| Status | OVERLOAD or OK badge |
+| Cases | Active case count |
+| Capacity % | With v-overload/v-ok class |
+| Efficiency % | With v-good/v-poor class, or "—" |
+| Avg Age | Days with 1 decimal |
+| SLA Breach | Format: "X / Y" |
+| Breach % | With color class |
 
-Rationale: Capacity calculations reflect only cases actively being 
-worked or ready to start. Cases in pending/waiting states are excluded 
-as they do not consume agent capacity until reactivated.
-```
+- Orange warning alert below: capacity alert text
 
-### Footer Update
+### 6.6 Section 4: Operational Analytics
+- 2×2 chart grid (`chart-grid`):
+  1. **Case Aging Distribution** — vertical bar, 6 buckets
+  2. **Customer Concentration (Top 5 + Others)** — doughnut
+  3. **Priority Distribution** — pie
+  4. **Status Reason Distribution (Active Only)** — horizontal bar
 
-**Add to footer:**
-```
-STATUS FILTERING: Only active work states included (8 approved statuses)
-EXCLUDED: Pending/Waiting states that do not consume active capacity
+### 6.7 Section 5: Customer Impact Analysis — Top 10
+- 7-column table:
+
+| Column | Content |
+|--------|---------|
+| # | Rank number |
+| Customer | Name (bold for top 3) |
+| Active Cases | Count |
+| % of Total | Percentage |
+| High Priority | Count of high priority cases |
+| Avg Age | Days with 1 decimal |
+| Risk Level | CRITICAL / HIGH / MEDIUM badge |
+
+- Orange warning alert below: customer concentration risk text
+
+### 6.8 Footer
+```html
+<div class="footer">
+  <strong>Support Unit Executive Performance Report</strong> • Snapshot: {date} • Generated by Senior Operations Manager & D365 F&O Solution Architect<br>
+  <strong>Data Sources:</strong> Active Cases ({N} filtered from {total} total) • Planning Fence: ≤{fence date} • Agents: 6 active + 1 Unassigned<br>
+  <strong>Version:</strong> PRMT01-E v2.3.0 (Status Reason Filtering + 30-Day Time-Fenced Capacity + Data Quality Audit)<br>
+  <div class="formula">
+    CAPACITY FORMULA: Overall_Capacity_% = (Normal_Est_Hours / 128 × 100) + (High_Est_Hours / 16 × 100) + (Low_Est_Hours / 240 × 100)
+    Normal Baseline = 128h (16 days × 8h) | High Baseline = 16h (2 days × 8h) | Low Baseline = 240h (30 days × 8h)
+    STATUS FILTERING (v2.3.0): Only active work states included (8 approved status reasons)
+    EXCLUDED: Pending/Waiting states ({N} cases, {X}%) — not actively consuming capacity
+    EFFICIENCY FORMULA: (Total_Estimated_Duration / Total_Actual_Duration) × 100
+    SLA THRESHOLDS: Normal Priority = 16 days | High Priority = 2 days | Low Priority = 30 days
+  </div>
+</div>
 ```
 
 ---
 
-## GOVERNANCE IMPACT
+## 7. DESIGN SYSTEM & CSS
 
-### Compliance Statement Update
+### Colors
+| Element | Color |
+|---------|-------|
+| Body background | `#0f0f1a` |
+| Body text | `#e2e8f0` |
+| Primary accent | `#7c3aed` |
+| Light accent | `#a78bfa` |
+| Dark accent | `#4c1d95` |
+| Section title text | `#c4b5fd` |
+| Table background | `#1a1a2e` |
+| Chart box gradient | `#1e1b4b` → `#0f0f1a` |
 
+### Card Classes
+| Class | Gradient |
+|-------|----------|
+| `.card.green` | `#10b981` → `#34d399` |
+| `.card.orange` | `#ea580c` → `#facc15` |
+| `.card.purple` | `#7c3aed` → `#c084fc` |
+| `.card.dark` | `#1e1b4b` → `#312e81` (+ purple border) |
+| `.card.blue` | `#0369a1` → `#22d3ee` |
+
+### Badge Classes
+| Class | Background | Text Color |
+|-------|------------|------------|
+| `.badge-overload` | `rgba(250,204,21,.15)` | `#fde047` |
+| `.badge-ok` | `rgba(34,197,94,.15)` | `#86efac` |
+| `.badge-critical` | `rgba(220,38,38,.15)` | `#fca5a5` |
+| `.badge-high` | `rgba(234,88,12,.15)` | `#fdba74` |
+| `.badge-medium` | `rgba(250,204,21,.15)` | `#fde047` |
+
+### Value Color Classes
+| Class | Color | Use |
+|-------|-------|-----|
+| `.v-overload` | `#fbbf24` (yellow) | Capacity >100% |
+| `.v-ok` | `#34d399` (green) | Capacity ≤100% |
+| `.v-good` | `#34d399` (green) | Efficiency ≥100% |
+| `.v-med` | `#fbbf24` (yellow) | Breach 30-60% |
+| `.v-poor` | `#f87171` (red) | Efficiency <50% or Breach >60% |
+
+### Alert Classes
+| Class | Border Color | Use |
+|-------|-------------|-----|
+| `.alert-success` | `#22c55e` | Data quality pass |
+| `.alert-info` | `#3b82f6` | Capacity formula / info |
+| `.alert-warning` | `#ea580c` | Capacity alerts, risk warnings |
+
+### Typography
+- Primary font: `'Aptos','Segoe UI',system-ui,-apple-system,sans-serif`
+- Monospace (meta, formula): `'Consolas','Courier New',monospace`
+- Max width: `1320px`
+
+---
+
+## 8. CHART CONFIGURATIONS
+
+### Chart 1: Capacity by Agent (Horizontal Bar)
+```javascript
+type: 'bar'
+indexAxis: 'y'
+// Sorted by capacity descending
+// Yellow (#fbbf24) for >100%, Green (#34d399) for ≤100%
+// X-axis: ticks with '%' suffix, title "Capacity %"
+// No legend
+borderRadius: 6
 ```
-Status Reason Filtering (NEW - v2.3.0):
-  ✓ Filter Applied: 8 active status reasons only
-  ✓ Excluded: Pending/Waiting states (non-active work)
-  ✓ Rationale: Capacity reflects actively worked cases only
-  ✓ Exclusion Count: [N] cases ([X]% of total)
+
+### Chart 2: Case Aging Distribution (Vertical Bar)
+```javascript
+type: 'bar'
+labels: ['0-10d','11-20d','21-30d','31-60d','61-90d','91+d']
+// Color gradient: green → yellow → orange → red
+// rgba(52,211,153,0.8), rgba(52,211,153,0.7), rgba(251,191,36,0.7),
+// rgba(251,146,60,0.7), rgba(239,68,68,0.7), rgba(220,38,38,0.8)
+borderRadius: 6
 ```
 
-### Report Limitations Update
-
-**Add to report limitations:**
+### Chart 3: Customer Concentration (Doughnut)
+```javascript
+type: 'doughnut'
+// Top 5 customers + "Others" bucket
+cutout: '55%'
+legend: position 'right'
+// Colors: #dc2626, #ea580c, #f59e0b, #8b5cf6, #3b82f6, #475569
+// Label format: "CustomerName (count)"
+// Tooltip shows percentage of total active cases
+borderColor: '#0f0f1a'
 ```
-- Status Filter: Only cases with active work status included
-- Excluded cases: [N] cases in Pending/Waiting states
-- Assumption: Pending cases do not consume capacity until reactivated
-- Impact: Capacity % reflects active workload only
+
+### Chart 4: Priority Distribution (Pie)
+```javascript
+type: 'pie'
+// Labels: "Normal (N)", "Low (N)", "High (N)"
+// Colors: #8b5cf6 (Normal), #3b82f6 (Low), #dc2626 (High)
+legend: position 'bottom'
+borderColor: '#0f0f1a'
+```
+
+### Chart 5: Status Reason Distribution (Horizontal Bar)
+```javascript
+type: 'bar'
+indexAxis: 'y'
+// All active status reasons, sorted by count descending
+// Abbreviated labels: "Req Gathering", "In Process MS", "Req Gather/Brief"
+// Mixed colors for visual distinction
+borderRadius: 4
+```
+
+### Global Chart Defaults
+```javascript
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.font.family = "'Aptos','Segoe UI',system-ui,sans-serif";
+Chart.defaults.font.size = 12;
 ```
 
 ---
 
-## VERIFICATION CHECKLIST UPDATE
+## 9. STATUS FILTERING SPECIFICATION (v2.3.0)
 
-**Add these verification steps:**
+### ONLY Include These 8 Status Reasons:
+1. Estimation
+2. In Process with Microsoft
+3. In Progress
+4. Not Started
+5. Requirement Gathering
+6. Requirement Gathering/Pending Briefing
+7. Researching
+8. Solution Design
 
-- [ ] Status Reason filter applied BEFORE data quality audit
+### EXCLUDE All Others, Including:
+- Pending Client Confirmation
+- Pending Dev
+- Pending Customer
+- Pending Delivery Date
+- Waiting on Customer
+- Waiting on Third Party
+- On Hold
+- Any status not in the approved list above
+
+### Rationale
+Capacity calculations must reflect only cases actively being worked. Cases in pending/waiting states are blocked on external parties and do not consume agent capacity until reactivated.
+
+### Reporting Requirements
+- Show total before filter, total after filter, and exclusion count
+- Display exclusion rate as percentage
+- List active status reasons with per-status case counts
+- Include status filter disclosure in header meta line AND dedicated filter box
+
+---
+
+## 10. COMMON MISTAKES TO AVOID
+
+1. **DO NOT change the section order** — Header → Filter Box → Exec Summary → Data Quality → Agent Table → Analytics Charts → Customer Table → Footer
+2. **DO NOT omit the status filter disclosure box** — it must appear between header and executive summary
+3. **DO NOT use a different color scheme or font** — match the design system exactly
+4. **DO NOT calculate capacity BEFORE applying status filter** — filter first, then calculate
+5. **DO NOT forget exclusion counts** in header meta line (format: `ACTIVE: N CASES • EXCLUDED: N PENDING/WAITING`)
+6. **DO NOT use "Top 10" for customer doughnut chart** — use "Top 5 + Others" (top 10 is for the TABLE only)
+7. **DO NOT change chart types** — capacity is horizontal bar, aging is vertical bar, customer is doughnut, priority is pie, status is horizontal bar
+8. **DO NOT show "Raji Aoun"** — always rename to "Unassigned Cases"
+9. **DO NOT forget planning fence** = report date + 30 days
+10. **DO NOT omit the formula box** in the footer
+11. **DO NOT make the capacity chart vertical** — it must be horizontal (indexAxis: 'y')
+12. **DO NOT forget to sort agents by capacity descending** in both table and chart
+13. **DO NOT use different badge logic** — >100% = OVERLOAD, ≤100% = OK
+14. **DO NOT skip the "Generated by Senior Operations Manager & D365 F&O Solution Architect"** attribution in footer
+15. **DO NOT include pending/waiting cases in ANY KPI calculation** — all metrics use filtered dataset only
+
+---
+
+## 11. VERIFICATION CHECKLIST
+
+Before finalizing any report, verify:
+
+- [ ] File named correctly: `SupportDepartmentPerformance{YYYYMMDD}-{N}.html`
+- [ ] Status filter applied BEFORE all calculations
 - [ ] Only 8 approved status reasons included
-- [ ] Excluded cases count reported
-- [ ] Status filter summary in Section 0 or header
-- [ ] Capacity calculations based on filtered dataset only
-- [ ] Footer states status filtering applied
-- [ ] Governance statement includes status filter compliance
+- [ ] Exclusion count shown in header meta and filter box
+- [ ] All 6 executive summary cards present with correct data
+- [ ] Data quality alert shows coverage %
+- [ ] Capacity chart is horizontal bar, sorted descending
+- [ ] Agent table has 8 columns, sorted by capacity descending
+- [ ] All 4 analytics charts render (aging, customer, priority, status)
+- [ ] Customer doughnut shows Top 5 + Others
+- [ ] Customer table shows Top 10 with risk badges
+- [ ] Footer includes formula box with all formulas
+- [ ] Footer includes status filtering disclosure
+- [ ] Planning fence = report date + 30 days
+- [ ] Chart.js CDN loaded (v4.4.1)
+- [ ] Design matches reference: dark theme, purple accents, correct fonts
 
 ---
 
-## EXAMPLE IMPACT ANALYSIS
+## 12. VERSION HISTORY
 
-### Before Status Filter:
-- Total Open Cases: 180
-- Department Capacity: 232.9%
-- Rebecca Estephan: 408.7%
+| Version | Date | Change |
+|---------|------|--------|
+| v2.3.0 | 12 Feb 2026 | Added mandatory status reason filtering (8 active statuses only). Major change — not backward compatible. |
+| v2.2.1 | Prior | Previous version without status filtering |
 
-### After Status Filter (Example):
-- Total Active Cases: 120 (60 excluded as Pending/Waiting)
-- Department Capacity: 155.3% (33% reduction)
-- Rebecca Estephan: 272.5% (33% reduction)
-
-**Key Insight:** Filtering for active status dramatically improves capacity 
-accuracy by excluding cases waiting on external parties.
-
----
-
-## PROMPT INTEGRATION POINTS
-
-### In "📊 INPUT SOURCES" Section:
-Add after confirmed available fields:
-```
-CRITICAL STATUS FILTERING (v2.3.0):
-- Column J: Status Reason
-- ONLY include these 8 active status reasons:
-  * Estimation
-  * In Process with Microsoft
-  * In Progress
-  * Not Started
-  * Requirement Gathering
-  * Requirement Gathering/Pending Briefing
-  * Researching
-  * Solution Design
-- EXCLUDE all Pending/Waiting statuses
-```
-
-### In "📐 MANDATORY KPIs" Section:
-Update capacity calculation step 2:
-```
-# STEP 2: Filter Cases Within Fence (WITH REQUIRED FIELDS AND ACTIVE STATUS)
-capacity_cases = open_df[
-    (open_df['Due Date'].notna()) &
-    (open_df['Initial Estimation Duration'].notna()) &
-    (open_df['Initial Estimation Duration'] > 0) &
-    (pd.to_datetime(open_df['Due Date']) <= planning_fence_date) &
-    (open_df['Status Reason'].isin(ACTIVE_STATUS_REASONS))  # NEW
-].copy()
-```
-
-### In "✅ DO's" Section:
-Add:
-```
-14. ALWAYS filter for 8 active Status Reasons BEFORE any calculations
-15. ALWAYS report excluded case count and exclusion rate
-16. ALWAYS explain status filtering rationale in report
-```
-
-### In "❌ DON'Ts" Section:
-Add:
-```
-13. DON'T include Pending/Waiting status cases in capacity
-14. DON'T skip status reason filtering step
-15. DON'T calculate capacity before applying status filter
-```
-
----
-
-## RATIONALE FOR CHANGE
-
-**Why This Matters:**
-1. **Accuracy:** Cases in "Pending Client Confirmation" or "Pending Dev" 
-   don't consume agent capacity - they're waiting on external parties
-2. **Actionability:** Executives need to know active workload, not total 
-   case count including blocked items
-3. **Resource Planning:** Capacity should reflect work agents can actively 
-   progress, not cases on hold
-4. **Consistency:** Aligns capacity metrics with actual work-in-progress
-
-**Business Impact:**
-- More accurate capacity planning
-- Better resource allocation decisions
-- Clearer visibility into actual vs. blocked workload
-- Enables targeted unblocking of pending cases
-
----
-
-## VERSION INFORMATION
-
-**Version:** PRMT01-E v2.3.0
-**Effective Date:** 12 February 2026
-**Previous Version:** PRMT01-E v2.2.1
-**Change Type:** Major - Calculation Methodology
-**Backward Compatible:** No (results will differ from v2.2.1)
-
-**Key Changes from v2.2.1:**
+**Key Changes in v2.3.0:**
 1. Added mandatory Status Reason filtering (8 active statuses only)
 2. Updated capacity calculation to use filtered dataset
-3. Added status filter summary reporting
+3. Added status filter summary reporting (disclosure box)
 4. Updated governance compliance statement
 5. Enhanced exclusion tracking and reporting
-
----
-
-## IMPLEMENTATION EXAMPLE
-
-```python
-# Complete filtering sequence (in order):
-
-# 1. Filter for department agents
-open_df = open_df[open_df['Owner'].isin(DEPARTMENT_AGENTS)].copy()
-open_df['Owner'] = open_df['Owner'].replace('Raji Aoun', 'Unassigned Cases')
-
-# 2. Filter for active status reasons (NEW v2.3.0)
-ACTIVE_STATUS_REASONS = [
-    'Estimation', 'In Process with Microsoft', 'In Progress',
-    'Not Started', 'Requirement Gathering', 
-    'Requirement Gathering/Pending Briefing',
-    'Researching', 'Solution Design'
-]
-open_df = open_df[open_df['Status Reason'].isin(ACTIVE_STATUS_REASONS)].copy()
-
-# 3. Proceed with data quality audit
-# 4. Calculate 30-day capacity on filtered dataset
-# 5. Generate report with status filter disclosure
-```
-
----
-
-**END OF UPDATE SPECIFICATION - PRMT01-E v2.3.0**
-
+6. Adopted reference design template (dark theme, Chart.js, responsive layout)
